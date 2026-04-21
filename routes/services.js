@@ -13,6 +13,10 @@ function requireServiceAccess(path) {
             "SELECT * FROM services WHERE path = ?"
         ).get(path);
 
+        if (!service) {
+            return res.status(404).send("Service not configured");
+        }
+
         const allowed = db.prepare(`
         SELECT 1 FROM permissions
         WHERE user_id = ? AND service_id = ?

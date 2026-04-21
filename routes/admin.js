@@ -78,4 +78,53 @@ router.post("/admin/service", requireAdmin, (req, res) => {
     res.json({ success: true, service });
 });
 
+router.post("/admin/user/role", requireAdmin, (req, res) => {
+    const { userId, role } = req.body;
+    if (!["user", "admin"].includes(role)) {
+        return res.status(400).json({ error: "Invalid role" });
+    }
+
+    db.prepare("UPDATE users SET role = ? WHERE id = ?").run(role, userId);
+    res.json({ success: true });
+});
+
+router.post("/admin/permission", requireAdmin, (req, res) => {
+    const { userId, serviceId, allowed } = req.body;
+
+    if (allowed) {
+        db.prepare(`
+        INSERT OR IGNORE INTO permissions (user_id, service_id)
+        VALUES (?, ?)
+        `).run(userId, serviceId);
+    } else {
+        db.prepare(`
+        DELETE FROM permissions
+        WHERE user_id = ? AND service_id = ?
+        `).run(userId, serviceId);
+    }
+
+    res.json({ success: true });
+});
+
+router.post("/admin/service/update", requireAdmin, (req, res) => {
+    const { id, name, path, icon, is_external } = req.body;
+
+    db.prepare(`
+    UPDATE services
+    SET name = ?, path = ?, icon = ?, is_external = ?
+    WHERE id = ?
+    `).run(name, path, icon || null, is_external ? 1 : 0, id);
+
+    res.json({ success: true });
+});
+
+router.post("/admin/service/delete", requireAdmin, (req, res) => {
+    const { serviceId } = req.body;
+
+    db.prepare("DELETE FROM permissions WHERE service_id = ?").run(serviceId);
+    db.prepare("DELETE FROM services WHERE id = ?").run(serviceId);
+
+    res.json({ success: true });
+});
+
 module.exports = router;

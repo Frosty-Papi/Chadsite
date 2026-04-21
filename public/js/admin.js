@@ -140,3 +140,30 @@ document.getElementById("create-service-form")
     form.reset();
 });
 
+window.updateRole = async function (userId, role) {
+    const res = await fetch("/admin/user/role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, role })
+    });
+
+    if (!res.ok) alert("Failed to update role");
+};
+
+window.togglePermission = async function (userId, serviceId, allowed) {
+    const res = await fetch("/admin/permission", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, serviceId, allowed })
+    });
+
+    if (!res.ok) alert("Failed to update permission");
+};
+
+function addUserToUI() {
+    location.reload();
+}
+
+function addServiceToUI() {
+    location.reload();
+}
