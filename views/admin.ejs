@@ -1,0 +1,218 @@
+<h2 style="margin-bottom:1.5rem;">Admin Dashboard</h2>
+
+<div class="admin-grid">
+
+<script src="/js/admin.js"></script>
+
+  <!-- USERS -->
+  <div class="card">
+  <input id="user-search" placeholder="Search users..." oninput="filterUsers()" />
+    <h3>Users & Access</h3>
+
+<div id="user-list">
+  <% users.forEach(userItem => { %>
+    <div class="user-block" data-username="<%= userItem.username.toLowerCase() %>">
+
+        <div class="user-header">
+          <strong><%= userItem.username %></strong>
+
+
+          <!-- ROLE TOGGLE -->
+          <select onchange="updateRole(<%= userItem.id %>, this.value)">
+            <option value="user" <%= userItem.role === "user" ? "selected" : "" %>>User</option>
+            <option value="admin" <%= userItem.role === "admin" ? "selected" : "" %>>Admin</option>
+          </select>
+        </div>
+
+        <div class="permissions">
+          <% services.forEach(service => { %>
+            <label>
+              <input type="checkbox"
+                onchange="togglePermission(<%= userItem.id %>, <%= service.id %>, this.checked)"
+                <%= userItem.permissions.includes(service.id) ? "checked" : "" %>
+              />
+              <%= service.icon ? service.icon : "•" %> <%= service.name %>
+
+            </label>
+          <% }) %>
+
+        </div>
+        <button onclick="deleteUser(<%= userItem.id %>, <%= JSON.stringify(userItem.username) %>)" style="background:#ef4444; color:white;"> Delete
+        </button>
+      </div>
+    <% }) %>
+
+
+    <!-- ADD USER -->
+    <h4 style="margin-top:1rem;">Create User</h4>
+    <form id="create-user-form">
+      <input name="username" placeholder="Username" required />
+      <input name="password" type="password" placeholder="Password" required />
+      <button type="submit">Create</button>
+    </form>
+
+  </div>
+</div>
+  <!-- SERVICES -->
+  <div class="card">
+    <h3>Services</h3>
+
+    <% services.forEach(service => { %>
+
+    <div class="service-row">
+      <span>
+        <%= service.icon || "•" %> <%= service.name %>
+      </span>
+
+      <div>
+      <button onclick="editService(
+        <%= service.id %>,
+        <%= JSON.stringify(service.name) %>,
+        <%= JSON.stringify(service.path) %>,
+        <%= JSON.stringify(service.icon || "") %>,
+        <%= service.is_external %>
+      )">
+          Edit
+        </button>
+        <button onclick="deleteService(<%= service.id %>)">Delete</button>
+      </div>
+    </div>
+
+    <% }) %>
+
+    <!-- ADD SERVICE -->
+    <h4 style="margin-top:1rem;">Add Service</h4>
+
+    <form id="create-service-form">
+      <input name="name" placeholder="Service Name" required />
+      <input name="path" placeholder="/path or https://url" required />
+      <input name="icon" placeholder="Icon" />
+      <label>
+        <input type="checkbox" name="is_external" />
+        External
+      </label>
+      <button type="submit">Add</button>
+    </form>
+  </div>
+
+</div>
+
+<style>
+.admin-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+}
+
+.card {
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.user-block {
+  border-top: 1px solid #1e293b;
+  padding: 1rem 0;
+}
+
+.user-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.permissions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.service-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+input {
+  width: 100%;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  color: white;
+  border-radius: 6px;
+}
+
+button {
+  padding: 0.4rem 0.8rem;
+  background: #38bdf8;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+</style>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-content">
+    <p id="modal-text">Are you sure?</p>
+    <div class="modal-actions">
+      <button onclick="confirmAction()">Yes</button>
+      <button onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="edit-modal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Edit Service</h3>
+
+    <input id="edit-name" placeholder="Name" />
+    <input id="edit-path" placeholder="Path" />
+    <input id="edit-icon" placeholder="Icon" />
+
+    <label>
+      <input type="checkbox" id="edit-external" />
+      External
+    </label>
+
+    <div class="modal-actions">
+      <button onclick="saveEdit()">Save</button>
+      <button onclick="closeEdit()">Cancel</button>
+    </div>
+  </div><!--GLOBAL FUNCTIONS (IMPORTANT)-->
+</div>
+
+<style>
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: #020617;
+  padding: 1.5rem;
+  border-radius: 10px;
+  border: 1px solid #1e293b;
+}
+
+.modal-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 1rem;
+}
+</style>
+
+

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ChadBroChill</title>
+
+<style>
+  :root {
+      --bg: #0f172a;
+      --panel: #020617;
+      --accent: #38bdf8;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+  }
+
+  * {
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:"Michroma",Arial, Helvetica, sans-serif;
+  }
+
+  body {
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* TOP BRAND HEADER */
+  header {
+      position: sticky;
+      top: 0;
+      width: 100%;
+      background-color: var(--panel);
+      border-bottom: 1px solid #1e293b;
+      z-index: 1000;
+  }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: var(--accent);
+    }
+    .logo:hover {
+      opacity: 0.85;
+    }
+
+    nav {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: var(--text);
+      font-size: 0.95rem;
+      transition: color 0.2s ease;
+    }
+
+    nav a:hover {
+      color: var(--accent);
+    }
+  /* SUB TITLE ABOVE VIDEO */
+  .subheader {
+    text-align:center;
+    font-size:22px;
+    font-weight:700;
+    margin:40px 0 0 0;
+    letter-spacing:0.5px;
+    color:var(--text);
+  }
+
+  .container {
+    flex:1;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:10px;
+    flex-direction:column;
+  }
+
+  .wrapper {
+    width:100%;
+    max-width:1100px;
+    aspect-ratio:16/9;
+    background:black;
+    border-radius:12px;
+    overflow:hidden;
+    box-shadow:0 0 25px rgba(0,229,255,0.10);
+    position:relative;
+  }
+
+  video {
+    width:100%;
+    height:100%;
+    background:black;
+  }
+
+  /* FOOTER STREAM SWITCHER */
+  footer {
+    background:var(--panel);
+    border-top:1px solid #1f2a3a;
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:10px;
+    padding:12px;
+  }
+
+  footer button {
+    background:rgba(255,255,255,0.04);
+    border:1px solid #2a3b52;
+    color:var(--muted);
+    padding:8px 14px;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:13px;
+  }
+
+  footer button.active {
+    border-color:var(--accent);
+    color:var(--accent);
+  }
+
+  footer button:hover {
+    border-color:var(--accent);
+    color:var(--accent);
+  }
+
+  /* FULLSCREEN BUTTON */
+  .controls {
+    position:absolute;
+    top:10px;
+    right:10px;
+  }
+
+  .btn {
+    background:rgba(0,0,0,0.6);
+    color:var(--text);
+    border:1px solid rgba(255,255,255,0.2);
+    padding:6px 10px;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:12px;
+  }
+
+  @media (max-width:600px) {
+    header a {
+      font-size:24px;
+    }
+
+    .subheader {
+      font-size:18px;
+    }
+  }
+</style>
+</head>
+
+<body>
+
+  <header>
+    <div class="nav-container">
+      <div class="logo">
+        <a href="/" style="text-decoration: none; color: inherit;">
+        ChadBroChill
+        </a>
+      </div>
+
+      <nav>
+        <a href="/gamestream.html">Game Stream</a>
+        <a href="https://ghs.chadbrochill.dynu.net">Secretariat</a>
+        <a href="deck/index.html">Deck</a>
+        <a href="/demerits.html">Demerits</a>
+      </nav>
+    </div>
+  </header>
+
+<div class="subheader">ChadStream</div>
+
+<div class="container">
+  <div class="wrapper">
+    <video id="video" autoplay playsinline controls></video>
+
+    <div class="controls">
+      <button class="btn" onclick="toggleFullscreen()">Fullscreen</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <button onclick="switchStream(0)" class="active">Main Board</button>
+  <button onclick="switchStream(1)">Player #1</button>
+  <button onclick="switchStream(2)">Player #2</button>
+  <button onclick="switchStream(3)">Player #3</button>
+  <button onclick="switchStream(4)">Player #4</button>
+</footer>
+
+<script>
+const streams = [
+  "https://YOUR_SRS_SERVER/live/main/whep",
+  "https://YOUR_SRS_SERVER/live/p1/whep",
+  "https://YOUR_SRS_SERVER/live/p2/whep",
+  "https://YOUR_SRS_SERVER/live/p3/whep",
+  "https://YOUR_SRS_SERVER/live/p4/whep"
+];
+
+let pc = null;
+let current = 0;
+
+const video = document.getElementById("video");
+
+function createPC(){
+  return new RTCPeerConnection({
+    iceTransportPolicy:"all",
+    bundlePolicy:"max-bundle",
+    rtcpMuxPolicy:"require",
+    sdpSemantics:"unified-plan"
+  });
+}
+
+function closePC(){
+  if(pc) pc.close();
+  pc = null;
+}
+
+async function startStream(i){
+  closePC();
+
+  pc = createPC();
+
+  pc.ontrack = e => video.srcObject = e.streams[0];
+
+  const offer = await pc.createOffer({
+    offerToReceiveAudio:true,
+    offerToReceiveVideo:true
+  });
+
+  await pc.setLocalDescription(offer);
+
+  const res = await fetch(streams[i], {
+    method:"POST",
+    headers:{ "Content-Type":"application/sdp" },
+    body:offer.sdp
+  });
+
+  const answer = await res.text();
+  await pc.setRemoteDescription({ type:"answer", sdp:answer });
+}
+
+function switchStream(i){
+  current = i;
+  startStream(i);
+
+  document.querySelectorAll("footer button").forEach((b, idx) => {
+    b.classList.toggle("active", idx === i);
+  });
+}
+
+function toggleFullscreen(){
+  const el = document.querySelector(".wrapper");
+  if(!document.fullscreenElement) el.requestFullscreen();
+  else document.exitFullscreen();
+}
+
+switchStream(0);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,44 @@
+<header id="top-nav">
+  <div class="nav-container">
+    <a class="logo" href="/">ChadBroChill</a>
+    <nav>
+      <% services.forEach(service => { %>
+
+        <% if (service.is_external) { %>
+          <a href="<%= service.path %>" target="_blank">
+            <%= service.name %>
+          </a>
+        <% } else { %>
+          <a href="<%= service.path %>">
+            <%= service.name %>
+          </a>
+        <% } %>
+
+      <% }) %>
+
+      <div id="auth-area">
+        <% if (!user) { %>
+          <a href="/login" class="login-btn">Login</a>
+        <% } else { %>
+
+          <a href="/profile" style="display:flex; align-items:center; gap:0.5rem; text-decoration:none;">
+
+        <% if (user.avatar) { %>
+          <img src="<%= user.avatar %>" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
+        <% } else { %>
+          <div class="profile-icon">
+            <%= (user.display_name || user.username).charAt(0).toUpperCase() %>
+          </div>
+        <% } %>
+
+            <span style="color:white;">
+              <%= user.display_name || user.username %>
+            </span>
+
+  </a>
+
+<% } %>
+      </div>
+    </nav>
+  </div>
+</header>

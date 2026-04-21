@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChadBroChill</title>
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --header: #020617;
+      --accent: #38bdf8;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Michroma", Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding-top: 70px;
+    }
+
+    header {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background-color: #020617;
+      border-bottom: 1px solid #1e293b;
+      z-index: 1000;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+    }
+    
+    /* hidden state */
+    header.nav-hidden {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+    }
+
+    .logo {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .logo:hover {
+      opacity: 0.85;
+    }
+
+    nav {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    nav a:hover {
+      color: var(--accent);
+    }
+
+    #auth-area {
+      margin-left: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .login-btn {
+      padding: 0.4rem 0.8rem;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      text-decoration: none;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    .login-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .profile-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background-color: var(--accent);
+      color: #020617;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #profile-dropdown {
+      display: none;
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 0.5rem;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+      min-height: calc(100vh - 80px);
+    }
+
+    .placeholder {
+      border: 2px dashed #1e293b;
+      border-radius: 12px;
+      padding: 4rem;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    footer {
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+
+<body>
+
+  <%- include("../partials/header", { user }) %>
+
+  <main>
+    <%- body %>
+  </main>
+
+  <%- include("../partials/footer") %>
+
+  <script>
+    function toggleDropdown() {
+      const el = document.getElementById("profile-dropdown");
+      el.style.display = el.style.display === "none" ? "block" : "none";
+    }
+  </script>
+
+<script>
+let lastScrollY = window.scrollY;
+let timeout;
+
+const nav = document.getElementById("top-nav");
+
+// show nav
+function showNav() {
+  nav.classList.remove("nav-hidden");
+}
+
+// hide nav
+function hideNav() {
+  nav.classList.add("nav-hidden");
+}
+
+// scroll behavior
+window.addEventListener("scroll", () => {
+  const currentY = window.scrollY;
+
+  if (currentY < lastScrollY) {
+    showNav(); // scrolling up
+  } else if (currentY > 80) {
+    hideNav(); // scrolling down
+  }
+
+  lastScrollY = currentY;
+});
+
+// reveal when mouse touches top area
+document.addEventListener("mousemove", (e) => {
+  if (e.clientY < 60) {
+    showNav();
+  }
+});
+
+// auto-hide after inactivity
+function resetTimer() {
+  clearTimeout(timeout);
+  timeout = setTimeout(() => {
+    hideNav();
+  }, 2500);
+}
+
+document.addEventListener("mousemove", resetTimer);
+document.addEventListener("scroll", resetTimer);
+resetTimer();
+</script>
+
+</body>
+</html>
