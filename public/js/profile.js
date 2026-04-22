@@ -1,6 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
     let cropper = null;
 
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || "";
+
     const input = document.getElementById("avatarInput");
     const preview = document.getElementById("preview");
     const cropSaveBtn = document.getElementById("crop-save-btn");
@@ -42,17 +44,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            const canvas = cropper.getCroppedCanvas({
-                width: 300,
-                height: 300
-            });
+            const canvas = cropper.getCroppedCanvas({ width: 300, height: 300 });
 
             canvas.toBlob(async (blob) => {
-                if (!blob) {
-                    alert("Failed to process image.");
-                    return;
-                }
-
                 const formData = new FormData();
                 formData.append("avatar", blob, "avatar.png");
 
@@ -61,6 +55,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const res = await fetch("/profile/update", {
                     method: "POST",
+                    headers: {
+                        "CSRF-Token": csrf
+                    },
                     body: formData
                 });
 
