@@ -8,6 +8,7 @@ const cookieParser = require("cookie-parser");
 const csrf = require("csurf");
 
 const { enforceAccountState } = require("./middleware/auth");
+const { cleanupOrphanAvatars } = require("./jobs/cleanupAvatars");
 
 const app = express();
 
@@ -19,7 +20,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "https://cdnjs.cloudflare.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+      styleSrc: ["'self'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:", "blob:"],
       connectSrc: ["'self'"],
@@ -79,6 +80,14 @@ app.use("/", require("./routes/services"));
 app.get("/", (req, res) => {
   res.render("index");
 });
+
+// Run cleanup at startup
+cleanupOrphanAvatars().catch(console.error);
+
+// Run cleanup every 6 hours
+setInterval(() => {
+  cleanupOrphanAvatars().catch(console.error);
+}, 6 * 60 * 60 * 1000);
 
 app.use((err, req, res, next) => {
   if (err && err.code === "EBADCSRFTOKEN") {
