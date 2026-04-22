@@ -1,3 +1,4 @@
+<link rel="stylesheet" href="/css/profile.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
 
@@ -21,12 +22,11 @@
 
     <label>Profile Picture</label>
     <input type="file" id="avatarInput" name="avatar" accept="image/*">
-    <img id="preview" style="max-width:200px; display:none;" />
+    <img id="preview" class="preview-hidden" />
     <button type="button" id="crop-save-btn">Crop & Save</button>
 
     <button type="submit">Save</button>
   </form>
-
 
 </div>
 
@@ -41,52 +41,10 @@
 </form>
 
 <div style="margin-top: 1rem;">
-  <form method="POST" action="/logout" onsubmit="return confirm('Log out?')">
+  <form method="POST" action="/logout">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <button type="submit" class="logout-btn">Logout</button>
   </form>
 </div>
-
-<style>
-  .profile-card {
-    max-width: 500px;
-    background: #020617;
-    padding: 2rem;
-    border-radius: 12px;
-    border: 1px solid #1e293b;
-  }
-
-  .avatar {
-    margin-bottom: 1rem;
-  }
-
-  .avatar img,
-  .fallback {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: #38bdf8;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    color: #020617;
-  }
-
-  .logout-btn {
-  padding: 0.6rem 1rem;
-  background: #ef4444;
-  border: none;
-  border-radius: 6px;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  transition: 0.2s ease;
-}
-
-.logout-btn:hover {
-  opacity: 0.9;
-}
-</style>
 
 <script src="/js/profile.js"></script>
