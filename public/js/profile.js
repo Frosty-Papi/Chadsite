@@ -53,6 +53,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 const displayNameInput = document.querySelector("input[name='display_name']");
                 formData.append("display_name", displayNameInput ? displayNameInput.value : "");
 
+                const csrf = document.querySelector('input[name="_csrf"]').value;
+                formData.append("_csrf", csrf);
+
                 const res = await fetch("/profile/update", {
                     method: "POST",
                     headers: {
