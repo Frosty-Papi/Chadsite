@@ -20,14 +20,10 @@
       <div id="auth-area">
 
         <% if (!user) { %>
-
           <a href="/login" class="login-btn">Login</a>
-
         <% } else { %>
-
           <div class="profile-menu">
-
-            <button type="button" class="profile-trigger">
+            <button type="button" class="profile-trigger" aria-haspopup="menu" aria-expanded="false">
               <% if (user.avatar) { %>
                 <img src="<%= user.avatar %>" class="avatar-img" />
               <% } else { %>
@@ -41,8 +37,7 @@
               </span>
             </button>
 
-            <div id="profile-dropdown" class="dropdown">
-
+            <div id="profile-dropdown" class="dropdown" role="menu" aria-hidden="true">
               <a href="/profile" class="dropdown-item">Profile</a>
 
               <% if (user.role === "admin" || user.role === "super_admin") { %>
@@ -53,11 +48,8 @@
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <button type="submit" class="dropdown-item logout">Logout</button>
               </form>
-
             </div>
-
           </div>
-
         <% } %>
 
       </div>
@@ -66,15 +58,3 @@
 
   </div>
 </header>
-
-<style>
-.profile-menu { position: relative; }
-.profile-trigger { display: flex; align-items: center; gap: 0.5rem; background: none; border: none; cursor: pointer; }
-.avatar-img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
-.profile-name { color: white; font-size: 0.9rem; }
-.dropdown { display: none; position: absolute; right: 0; top: calc(100% + 8px); min-width: 180px; background: #020617; border: 1px solid #1e293b; border-radius: 10px; padding: 0.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.35); z-index: 1100; }
-.dropdown-item { display: block; width: 100%; padding: 0.6rem 0.8rem; text-decoration: none; color: #e2e8f0; background: none; border: none; text-align: left; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
-.dropdown-item:hover { background: #0f172a; color: #38bdf8; }
-.dropdown-item.logout { color: #f87171; }
-.dropdown-item.logout:hover { background: #0f172a; color: #ef4444; }
-</style>
