@@ -1,4 +1,10 @@
-import { state } from './state.js';
+import { state, setState } from './state.js';
+
+function loadData() {
+  if (window.abilities) setState({ abilities: window.abilities });
+  if (window.attack_modifiers_categories) setState({ modifiers: window.attack_modifiers_categories });
+  if (window.allItems) setState({ gear: window.allItems });
+}
 
 function render() {
   const root = document.getElementById('app');
@@ -7,13 +13,15 @@ function render() {
   root.innerHTML = `
     <div class="deck-app">
       <h1>Deck (Rebuild in progress)</h1>
-      <p>Menu: ${state.menu}</p>
-      <p>Turn: ${state.turn}</p>
+      <p>Abilities loaded: ${state.abilities.length}</p>
+      <p>Modifiers loaded: ${state.modifiers.length}</p>
+      <p>Gear loaded: ${state.gear.length}</p>
     </div>
   `;
 }
 
 function init() {
+  loadData();
   render();
 }
 
