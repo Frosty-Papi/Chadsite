@@ -1,11 +1,46 @@
-window.deleteUser = async function(userId, username) {
-    if (!confirm(`Delete ${username}?`)) return;
+function showTab(name) {
+    document.querySelectorAll(".tab").forEach((t) => t.classList.add("hidden"));
+    const tab = document.getElementById(`tab-${name}`);
+    if (tab) tab.classList.remove("hidden");
+}
 
-    const res = await fetch("/admin/user/delete", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ userId })
+function filterUsers() {
+    const input = document.getElementById("search");
+    const val = (input?.value || "").toLowerCase();
+
+    document.querySelectorAll("#user-table tr").forEach((r) => {
+        r.style.display = r.dataset.name.includes(val) ? "" : "none";
     });
+}
+
+async function api(url, body) {
+    return fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "CSRF-Token": window.csrfToken
+        },
+        body: JSON.stringify(body)
+    });
+}
+
+async function createUser(e) {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    const res = await api("/admin/user", data);
+
+    if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || "Failed to create user");
+        return;
+    }
+
+    location.reload();
+}
+
+async function deleteUser(id) {
+    if (!confirm("Delete user?")) return;
+    const res = await api("/admin/user/delete", { userId: id });
 
     if (!res.ok) {
         alert(await res.text());
@@ -13,157 +48,112 @@ window.deleteUser = async function(userId, username) {
     }
 
     location.reload();
-};
+}
 
-let editingServiceId = null;
-let pendingDelete = null;
-
-//GLOBAL FUNCTIONS (IMPORTANT)
-
-window.editService = function(id, name, path, icon, isExternal) {
-    editingServiceId = id;
-
-    document.getElementById("edit-name").value = name;
-    document.getElementById("edit-path").value = path;
-    document.getElementById("edit-icon").value = icon;
-    document.getElementById("edit-external").checked = !!isExternal;
-
-    document.getElementById("edit-modal").classList.remove("hidden");
-};
-
-window.closeEdit = function () {
-    document.getElementById("edit-modal").classList.add("hidden");
-    editingServiceId = null;
-};
-
-window.saveEdit = async function () {
-    await fetch("/admin/service/update", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            id: editingServiceId,
-            name: document.getElementById("edit-name").value,
-                             path: document.getElementById("edit-path").value,
-                             icon: document.getElementById("edit-icon").value,
-                             is_external: document.getElementById("edit-external").checked
-        })
-    });
-
-    location.reload();
-};
-
-window.deleteService = async function(serviceId) {
-    if (!confirm("Delete this service?")) return;
-
-    await fetch("/admin/service/delete", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ serviceId })
-    });
-
-    location.reload();
-};
-
-window.closeModal = function () {
-    pendingDelete = null;
-    document.getElementById("modal").classList.add("hidden");
-};
-
-window.confirmAction = async function () {
-    if (!pendingDelete) return;
-
-    await fetch("/admin/service/delete", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ serviceId: pendingDelete })
-    });
-
-    location.reload();
-};
-
-window.filterUsers = function () {
-    const value = document.getElementById("user-search").value.toLowerCase();
-
-    document.querySelectorAll(".user-block").forEach(el => {
-        el.style.display =
-        el.dataset.username.includes(value) ? "" : "none";
-    });
-};
-
-document.getElementById("create-user-form")
-?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const form = e.target;
-    const data = Object.fromEntries(new FormData(form));
-
-    const res = await fetch("/admin/user", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(data)
-    });
-
-    const json = await res.json();
-
-    if (!res.ok) {
-        alert(json.error);
-        return;
-    }
-
-    addUserToUI(json.user);
-    form.reset();
-});
-
-document.getElementById("create-service-form")
-?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const form = e.target;
-    const data = Object.fromEntries(new FormData(form));
-
-    data.is_external = !!data.is_external;
-
-    const res = await fetch("/admin/service", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(data)
-    });
-
-    const json = await res.json();
-
-    if (!res.ok) {
-        alert(json.error);
-        return;
-    }
-
-    addServiceToUI(json.service);
-    form.reset();
-});
-
-window.updateRole = async function (userId, role) {
-    const res = await fetch("/admin/user/role", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, role })
-    });
-
+async function setRole(id, role) {
+    const res = await api("/admin/user/role", { userId: id, role });
     if (!res.ok) alert("Failed to update role");
-};
+}
 
-window.togglePermission = async function (userId, serviceId, allowed) {
-    const res = await fetch("/admin/permission", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, serviceId, allowed })
+async function disableUser(id) {
+    const res = await api("/admin/user/disable", {
+        userId: id,
+        mode: "permanent"
     });
 
-    if (!res.ok) alert("Failed to update permission");
-};
+    if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || "Failed to disable user");
+        return;
+    }
 
-function addUserToUI() {
     location.reload();
 }
 
-function addServiceToUI() {
+async function enableUser(id) {
+    const res = await api("/admin/user/enable", { userId: id });
+
+    if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || "Failed to enable user");
+        return;
+    }
+
     location.reload();
 }
+
+async function resetPassword(id) {
+    const res = await api("/admin/user/reset-password", { userId: id });
+    const json = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+        alert(json.error || "Failed to reset password");
+        return;
+    }
+
+    alert(`Temp password: ${json.password}`);
+}
+
+async function forceReset(id) {
+    const res = await api("/admin/user/force-reset", { userId: id });
+
+    if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || "Failed to force reset");
+        return;
+    }
+
+    alert("User will reset password on next login");
+}
+
+async function createService(e) {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    const res = await api("/admin/service", data);
+
+    if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || "Failed to create service");
+        return;
+    }
+
+    location.reload();
+}
+
+async function deleteService(id) {
+    const res = await api("/admin/service/delete", { serviceId: id });
+
+    if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || "Failed to delete service");
+        return;
+    }
+
+    location.reload();
+}
+
+window.showTab = showTab;
+window.deleteUser = deleteUser;
+window.setRole = setRole;
+window.disableUser = disableUser;
+window.enableUser = enableUser;
+window.resetPassword = resetPassword;
+window.forceReset = forceReset;
+window.deleteService = deleteService;
+
+document.addEventListener("DOMContentLoaded", () => {
+    const search = document.getElementById("search");
+    if (search) {
+        search.addEventListener("input", filterUsers);
+    }
+
+    const createUserForm = document.getElementById("create-user-form");
+    if (createUserForm) {
+        createUserForm.addEventListener("submit", createUser);
+    }
+
+    const createServiceForm = document.getElementById("create-service-form");
+    if (createServiceForm) {
+        createServiceForm.addEventListener("submit", createService);
+    }
+});

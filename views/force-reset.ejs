@@ -1,9 +1,14 @@
 <h2>Reset Your Password</h2>
 
 <form method="POST" action="/force-reset">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
   <input name="new" type="password" placeholder="New password" required />
   <input name="confirm" type="password" placeholder="Confirm password" required />
   <button type="submit">Update Password</button>
 </form>
 
-<p>Password must be at least 12 characters and include uppercase, lowercase, number, and special character.</p>
+<p>
+  Password must be at least 12 characters and include uppercase, lowercase,
+  number, and special character.
+</p>

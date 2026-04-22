@@ -3,9 +3,10 @@
   <div class="login-card">
 
     <h1 class="title">ChadBroChill</h1>
-    <p class="subtitle">Sign in to continue</p>
 
     <form method="POST" action="/login" class="login-form">
+
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
       <label>Username</label>
       <input name="username" type="text" required />

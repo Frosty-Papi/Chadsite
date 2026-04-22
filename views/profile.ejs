@@ -1,10 +1,9 @@
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+
 <h2>My Profile</h2>
 
 <div class="profile-card">
-
   <div class="avatar">
     <% if (user.avatar) { %>
       <img src="<%= user.avatar %>" />
@@ -15,145 +14,79 @@
     <% } %>
   </div>
 
-<form method="POST" action="/profile/update" enctype="multipart/form-data">
+  <form method="POST" action="/profile/update" enctype="multipart/form-data">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <label>Display Name</label>
+    <input name="display_name" value="<%= user.display_name || '' %>" />
 
-  <label>Display Name</label>
-  <input name="display_name" value="<%= user.display_name || '' %>" />
+    <label>Profile Picture</label>
+    <input type="file" id="avatarInput" name="avatar" accept="image/*">
+    <img id="preview" style="max-width:200px; display:none;" />
+    <button type="button" id="crop-save-btn">Crop & Save</button>
 
-  <label>Profile Picture</label>
-  <input type="file" id="avatarInput" accept="image/*">
-  <img id="preview" style="max-width:200px; display:none;" />
-  <button type="button" onclick="cropAndUpload()">Crop & Save</button>
+    <button type="submit">Save</button>
+  </form>
 
-  <button type="submit">Save</button>
-</form>
 
 </div>
 
 <h3>Change Password</h3>
 
-<form method="POST" action="/profile/password">
-
+<form method="POST" action="/profile/password" id="password-form">
+<input type="hidden" name="_csrf" value="<%= csrfToken %>">
   <input name="current" type="password" placeholder="Current password" required />
-
   <input name="new" type="password" placeholder="New password" required />
-
   <input name="confirm" type="password" placeholder="Confirm password" required />
-
   <button type="submit">Update Password</button>
 </form>
 
+<div style="margin-top: 1rem;">
+  <form method="POST" action="/logout" onsubmit="return confirm('Log out?')">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button type="submit" class="logout-btn">Logout</button>
+  </form>
+</div>
+
 <style>
-.profile-card {
-  max-width: 500px;
-  background: #020617;
-  padding: 2rem;
-  border-radius: 12px;
-  border: 1px solid #1e293b;
+  .profile-card {
+    max-width: 500px;
+    background: #020617;
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid #1e293b;
+  }
+
+  .avatar {
+    margin-bottom: 1rem;
+  }
+
+  .avatar img,
+  .fallback {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: #38bdf8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #020617;
+  }
+
+  .logout-btn {
+  padding: 0.6rem 1rem;
+  background: #ef4444;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s ease;
 }
 
-.avatar {
-  margin-bottom: 1rem;
-}
-
-.avatar img,
-.fallback {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: #38bdf8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-  color: #020617;
+.logout-btn:hover {
+  opacity: 0.9;
 }
 </style>
 
-<script>
-let cropper = null;
-
-const input = document.getElementById("avatarInput");
-const preview = document.getElementById("preview");
-
-input.addEventListener("change", function (e) {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-
-  reader.onload = function (evt) {
-    preview.src = evt.target.result;
-    preview.style.display = "block";
-
-    // IMPORTANT: destroy old instance
-    if (cropper) {
-      cropper.destroy();
-      cropper = null;
-    }
-
-    // wait for image to load
-    preview.onload = function () {
-      cropper = new Cropper(preview, {
-        aspectRatio: 1,
-        viewMode: 1
-      });
-    };
-  };
-
-  reader.readAsDataURL(file);
-});
-</script>
-
-<script>
-window.cropAndUpload = async function () {
-  if (!cropper) {
-    alert("Please select and crop an image first.");
-    return;
-  }
-
-  const canvas = cropper.getCroppedCanvas({
-    width: 300,
-    height: 300
-  });
-
-  canvas.toBlob(async (blob) => {
-    if (!blob) {
-      alert("Failed to process image.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("avatar", blob, "avatar.png");
-
-    const display_name = document.querySelector("input[name='display_name']").value;
-    formData.append("display_name", display_name);
-
-    const res = await fetch("/profile/update", {
-      method: "POST",
-      body: formData
-    });
-
-    if (!res.ok) {
-      alert("Upload failed");
-      return;
-    }
-
-    location.reload();
-  }, "image/png");
-};
-</script>
-
-<script>
-document.querySelector("form[action='/profile/password']")
-  .addEventListener("submit", function (e) {
-
-    const newPass = this.querySelector("input[name='new']").value;
-    const confirm = this.querySelector("input[name='confirm']").value;
-
-    if (newPass !== confirm) {
-      e.preventDefault();
-      alert("Passwords do not match");
-    }
-});
-</script>
+<script src="/js/profile.js"></script>

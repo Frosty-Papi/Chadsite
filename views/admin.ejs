@@ -1,14 +1,14 @@
 <h2>Admin Dashboard</h2>
 
 <div class="tabs">
-  <button onclick="showTab('users')">Users</button>
+  <button type="button" onclick="showTab('users')">Users</button>
   <% if (isSuperAdmin) { %>
-    <button onclick="showTab('services')">Services</button>
+    <button type="button" onclick="showTab('services')">Services</button>
   <% } %>
 </div>
 
 <div id="tab-users" class="tab">
-  <input id="search" placeholder="Search users..." oninput="filterUsers()" />
+  <input id="search" placeholder="Search users..." />
 
   <table>
     <thead>
@@ -26,8 +26,8 @@
           <td>
             <% if (isSuperAdmin) { %>
               <select onchange="setRole(<%= u.id %>, this.value)">
-                <option value="user" <%= u.role==='user'?'selected':'' %>>User</option>
-                <option value="admin" <%= u.role==='admin'?'selected':'' %>>Admin</option>
+                <option value="user" <%= u.role === "user" ? "selected" : "" %>>User</option>
+                <option value="admin" <%= u.role === "admin" ? "selected" : "" %>>Admin</option>
               </select>
             <% } else { %>
               <%= u.role %>
@@ -43,12 +43,12 @@
             <% } %>
           </td>
           <td>
-            <button onclick="disableUser(<%= u.id %>)">Disable</button>
-            <button onclick="enableUser(<%= u.id %>)">Enable</button>
-            <button onclick="resetPassword(<%= u.id %>)">Reset PW</button>
-            <button onclick="forceReset(<%= u.id %>)">Force Reset</button>
+            <button type="button" onclick="disableUser(<%= u.id %>)">Disable</button>
+            <button type="button" onclick="enableUser(<%= u.id %>)">Enable</button>
+            <button type="button" onclick="resetPassword(<%= u.id %>)">Reset PW</button>
+            <button type="button" onclick="forceReset(<%= u.id %>)">Force Reset</button>
             <% if (isSuperAdmin) { %>
-              <button onclick="deleteUser(<%= u.id %>)">Delete</button>
+              <button type="button" onclick="deleteUser(<%= u.id %>)">Delete</button>
             <% } %>
           </td>
         </tr>
@@ -57,108 +57,47 @@
   </table>
 
   <% if (isSuperAdmin) { %>
-  <h3>Create User</h3>
-  <form onsubmit="createUser(event)">
-    <input name="username" placeholder="Username" required />
-    <input name="password" type="password" placeholder="Password" required />
-    <button>Create</button>
-  </form>
+    <h3>Create User</h3>
+    <form id="create-user-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input name="username" placeholder="Username" required />
+      <input name="password" type="password" placeholder="Password" required />
+      <button type="submit">Create</button>
+    </form>
   <% } %>
 </div>
 
 <% if (isSuperAdmin) { %>
-<div id="tab-services" class="tab hidden">
-  <h3>Services</h3>
+  <div id="tab-services" class="tab hidden">
+    <h3>Services</h3>
 
-  <% services.forEach(s => { %>
-    <div>
-      <%= s.name %> (<%= s.min_role %>)
-      <button onclick="deleteService(<%= s.id %>)">Delete</button>
-    </div>
-  <% }) %>
+    <% services.forEach(s => { %>
+      <div>
+        <%= s.name %> (<%= s.min_role %>)
+        <button type="button" onclick="deleteService(<%= s.id %>)">Delete</button>
+      </div>
+    <% }) %>
 
-  <form onsubmit="createService(event)">
-    <input name="name" placeholder="Name" required />
-    <input name="path" placeholder="Path" required />
-    <select name="min_role">
-      <option value="user">User</option>
-      <option value="admin">Admin</option>
-    </select>
-    <button>Add</button>
-  </form>
-</div>
+    <form id="create-service-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input name="name" placeholder="Name" required />
+      <input name="path" placeholder="Path" required />
+      <select name="min_role">
+        <option value="user">User</option>
+        <option value="admin">Admin</option>
+      </select>
+      <button type="submit">Add</button>
+    </form>
+  </div>
 <% } %>
 
-<script>
-function showTab(name) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.add('hidden'));
-  document.getElementById('tab-' + name).classList.remove('hidden');
-}
-
-function filterUsers() {
-  const val = document.getElementById('search').value.toLowerCase();
-  document.querySelectorAll('#user-table tr').forEach(r => {
-    r.style.display = r.dataset.name.includes(val) ? '' : 'none';
-  });
-}
-
-async function api(url, body) {
-  return fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-}
-
-async function createUser(e) {
-  e.preventDefault();
-  const data = Object.fromEntries(new FormData(e.target));
-  const res = await api('/admin/user', data);
-  location.reload();
-}
-
-async function deleteUser(id) {
-  if (!confirm('Delete user?')) return;
-  await api('/admin/user/delete', { userId:id });
-  location.reload();
-}
-
-async function setRole(id, role) {
-  await api('/admin/user/role', { userId:id, role });
-}
-
-async function disableUser(id) {
-  await api('/admin/user/disable', { userId:id, mode:'permanent' });
-  location.reload();
-}
-
-async function enableUser(id) {
-  await api('/admin/user/enable', { userId:id });
-  location.reload();
-}
-
-async function resetPassword(id) {
-  const res = await api('/admin/user/reset-password', { userId:id });
-  const json = await res.json();
-  alert('Temp password: ' + json.password);
-}
-
-async function forceReset(id) {
-  await api('/admin/user/force-reset', { userId:id });
-  alert('User will reset password on next login');
-}
-
-async function createService(e) {
-  e.preventDefault();
-  const data = Object.fromEntries(new FormData(e.target));
-  await api('/admin/service', data);
-  location.reload();
-}
-
-async function deleteService(id) {
-  await api('/admin/service/delete', { serviceId:id });
-  location.reload();
-}
-</script>
-
 <style>
-.tab.hidden { display:none; }
-table { width:100%; }
-th,td { padding:6px; }
+  .tab.hidden { display: none; }
+  table { width: 100%; }
+  th, td { padding: 6px; }
 </style>
+
+<script src="/js/admin.js"></script>
+<script>
+  window.csrfToken = "<%= csrfToken %>";
+</script>

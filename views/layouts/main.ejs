@@ -40,8 +40,7 @@
       z-index: 1000;
       transition: transform 0.25s ease, opacity 0.25s ease;
     }
-    
-    /* hidden state */
+
     header.nav-hidden {
       transform: translateY(-100%);
       opacity: 0;
@@ -143,7 +142,6 @@
 </head>
 
 <body>
-
   <%- include("../partials/header", { user }) %>
 
   <main>
@@ -152,61 +150,6 @@
 
   <%- include("../partials/footer") %>
 
-  <script>
-    function toggleDropdown() {
-      const el = document.getElementById("profile-dropdown");
-      el.style.display = el.style.display === "none" ? "block" : "none";
-    }
-  </script>
-
-<script>
-let lastScrollY = window.scrollY;
-let timeout;
-
-const nav = document.getElementById("top-nav");
-
-// show nav
-function showNav() {
-  nav.classList.remove("nav-hidden");
-}
-
-// hide nav
-function hideNav() {
-  nav.classList.add("nav-hidden");
-}
-
-// scroll behavior
-window.addEventListener("scroll", () => {
-  const currentY = window.scrollY;
-
-  if (currentY < lastScrollY) {
-    showNav(); // scrolling up
-  } else if (currentY > 80) {
-    hideNav(); // scrolling down
-  }
-
-  lastScrollY = currentY;
-});
-
-// reveal when mouse touches top area
-document.addEventListener("mousemove", (e) => {
-  if (e.clientY < 60) {
-    showNav();
-  }
-});
-
-// auto-hide after inactivity
-function resetTimer() {
-  clearTimeout(timeout);
-  timeout = setTimeout(() => {
-    hideNav();
-  }, 2500);
-}
-
-document.addEventListener("mousemove", resetTimer);
-document.addEventListener("scroll", resetTimer);
-resetTimer();
-</script>
-
+  <script src="/js/main.js"></script>
 </body>
 </html>

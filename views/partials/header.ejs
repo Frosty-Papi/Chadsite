@@ -1,9 +1,11 @@
 <header id="top-nav">
   <div class="nav-container">
-    <a class="logo" href="/">ChadBroChill</a>
-    <nav>
-      <% services.forEach(service => { %>
 
+    <a class="logo" href="/">ChadBroChill</a>
+
+    <nav>
+
+      <% services.forEach(service => { %>
         <% if (service.is_external) { %>
           <a href="<%= service.path %>" target="_blank">
             <%= service.name %>
@@ -13,32 +15,139 @@
             <%= service.name %>
           </a>
         <% } %>
-
       <% }) %>
 
       <div id="auth-area">
+
         <% if (!user) { %>
+
           <a href="/login" class="login-btn">Login</a>
+
         <% } else { %>
 
-          <a href="/profile" style="display:flex; align-items:center; gap:0.5rem; text-decoration:none;">
+          <div class="profile-menu">
 
-        <% if (user.avatar) { %>
-          <img src="<%= user.avatar %>" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
-        <% } else { %>
-          <div class="profile-icon">
-            <%= (user.display_name || user.username).charAt(0).toUpperCase() %>
+            <!-- Trigger -->
+            <button type="button" class="profile-trigger" onclick="toggleDropdown()">
+              <% if (user.avatar) { %>
+                <img src="<%= user.avatar %>" class="avatar-img" />
+              <% } else { %>
+                <div class="profile-icon">
+                  <%= (user.display_name || user.username).charAt(0).toUpperCase() %>
+                </div>
+              <% } %>
+
+              <span class="profile-name">
+                <%= user.display_name || user.username %>
+              </span>
+            </button>
+
+            <!-- Dropdown -->
+            <div id="profile-dropdown" class="dropdown">
+
+              <a href="/profile" class="dropdown-item">
+                Profile
+              </a>
+
+              <% if (user.role === "admin" || user.role === "super_admin") { %>
+                <a href="/admin" class="dropdown-item">
+                  Admin
+                </a>
+              <% } %>
+
+              <form method="POST" action="/logout">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" class="dropdown-item logout">
+                  Logout
+                </button>
+              </form>
+
+            </div>
+
           </div>
+
         <% } %>
 
-            <span style="color:white;">
-              <%= user.display_name || user.username %>
-            </span>
-
-  </a>
-
-<% } %>
       </div>
+
     </nav>
+
   </div>
 </header>
+
+<style>
+/* Profile Menu Container */
+.profile-menu {
+  position: relative;
+}
+
+/* Trigger Button */
+.profile-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* Avatar */
+.avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Username */
+.profile-name {
+  color: white;
+  font-size: 0.9rem;
+}
+
+/* Dropdown */
+.dropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 180px;
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 0.5rem;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+  z-index: 1100;
+}
+
+/* Dropdown Items */
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  text-decoration: none;
+  color: #e2e8f0;
+  background: none;
+  border: none;
+  text-align: left;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+/* Hover */
+.dropdown-item:hover {
+  background: #0f172a;
+  color: #38bdf8;
+}
+
+/* Logout */
+.dropdown-item.logout {
+  color: #f87171;
+}
+
+.dropdown-item.logout:hover {
+  background: #0f172a;
+  color: #ef4444;
+}
+</style>

@@ -1,34 +1,88 @@
-const multer = require("multer");
-const path = require("path");
+document.addEventListener("DOMContentLoaded", () => {
+    let cropper = null;
 
-const storage = multer.diskStorage({
-    destination: "public/uploads/avatars",
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname || ".png");
-        cb(null, `avatar_${req.session.userId}_${Date.now()}${ext}`);
+    const input = document.getElementById("avatarInput");
+    const preview = document.getElementById("preview");
+    const cropSaveBtn = document.getElementById("crop-save-btn");
+    const passwordForm = document.getElementById("password-form");
+
+    if (input && preview) {
+        input.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+
+            reader.onload = (evt) => {
+                preview.src = evt.target.result;
+                preview.style.display = "block";
+
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+
+                preview.onload = () => {
+                    if (typeof Cropper === "undefined") return;
+                    cropper = new Cropper(preview, {
+                        aspectRatio: 1,
+                        viewMode: 1
+                    });
+                };
+            };
+
+            reader.readAsDataURL(file);
+        });
     }
-});
 
-const upload = multer({ storage });
+    if (cropSaveBtn) {
+        cropSaveBtn.addEventListener("click", async () => {
+            if (!cropper) {
+                alert("Please select and crop an image first.");
+                return;
+            }
 
-router.post("/profile/update", requireLogin, upload.single("avatar"), (req, res) => {
-    const user = getUser(req);
-    const displayName = (req.body.display_name || "").trim();
-    const avatarPath = req.file ? `/uploads/avatars/${req.file.filename}` : null;
+            const canvas = cropper.getCroppedCanvas({
+                width: 300,
+                height: 300
+            });
 
-    if (avatarPath) {
-        db.prepare(`
-        UPDATE users
-        SET display_name = ?, avatar = ?
-        WHERE id = ?
-        `).run(displayName || null, avatarPath, user.id);
-    } else {
-        db.prepare(`
-        UPDATE users
-        SET display_name = ?
-        WHERE id = ?
-        `).run(displayName || null, user.id);
+            canvas.toBlob(async (blob) => {
+                if (!blob) {
+                    alert("Failed to process image.");
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append("avatar", blob, "avatar.png");
+
+                const displayNameInput = document.querySelector("input[name='display_name']");
+                formData.append("display_name", displayNameInput ? displayNameInput.value : "");
+
+                const res = await fetch("/profile/update", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    alert("Upload failed");
+                    return;
+                }
+
+                location.reload();
+            }, "image/png");
+        });
     }
 
-    res.redirect("/profile");
+    if (passwordForm) {
+        passwordForm.addEventListener("submit", (e) => {
+            const newPass = passwordForm.querySelector("input[name='new']").value;
+            const confirm = passwordForm.querySelector("input[name='confirm']").value;
+
+            if (newPass !== confirm) {
+                e.preventDefault();
+                alert("Passwords do not match");
+            }
+        });
+    }
 });

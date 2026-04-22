@@ -4,6 +4,9 @@ const expressLayouts = require("express-ejs-layouts");
 const crypto = require("crypto");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
+const cookieParser = require("cookie-parser");
+const csrf = require("csurf");
+
 
 const { enforceAccountState } = require("./middleware/auth");
 
@@ -12,24 +15,19 @@ const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
-// Security headers
-app.use(helmet());
+// Security headers, but without CSP until all inline JS is removed everywhere
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
 
 // Body limits
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(express.json({ limit: "1mb" }));
 
+app.use(cookieParser());
+
 // Basic CSRF protection via Origin check
-app.use((req, res, next) => {
-  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
-    const origin = req.get("origin");
-    const host = `${req.protocol}://${req.get("host")}`;
-    if (origin && origin !== host) {
-      return res.status(403).send("Forbidden");
-    }
-  }
-  next();
-});
+
 
 // Rate limit login
 const loginLimiter = rateLimit({
@@ -38,7 +36,8 @@ const loginLimiter = rateLimit({
 });
 
 // Session secret
-const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+const SESSION_SECRET =
+process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
 
 app.use(session({
   secret: SESSION_SECRET,
@@ -50,6 +49,14 @@ app.use(session({
     secure: process.env.NODE_ENV === "production"
   }
 }));
+
+const csrfProtection = csrf({ cookie: false });
+app.use(csrfProtection);
+
+app.use((req, res, next) => {
+  res.locals.csrfToken = req.csrfToken();
+  next();
+});
 
 // View engine
 app.use(expressLayouts);

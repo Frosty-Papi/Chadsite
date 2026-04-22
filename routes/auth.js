@@ -62,7 +62,7 @@ router.post("/force-reset", (req, res) => {
   res.redirect("/");
 });
 
-router.get("/logout", (req, res) => {
+router.post("/logout", (req, res) => {
   req.session.destroy(() => res.redirect("/login"));
 });
 
