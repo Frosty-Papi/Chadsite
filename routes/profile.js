@@ -3,72 +3,67 @@ const bcrypt = require("bcrypt");
 const db = require("../db");
 const { getUser, requireLogin } = require("../middleware/auth");
 const { validatePassword } = require("../lib/passwords");
+const { deleteAvatarFile, ensureAvatarDir } = require("../lib/files");
+
 const multer = require("multer");
+const sharp = require("sharp");
+const crypto = require("crypto");
+const fs = require("fs");
 const path = require("path");
+
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: "public/uploads/avatars",
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || ".png");
-    cb(null, `avatar_${req.session.userId}_${Date.now()}${ext}`);
-  }
+const upload = multer({
+  storage: multer.memoryStorage(),
+                      limits: { fileSize: 5 * 1024 * 1024 } // 5MB upload limit
 });
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 2 * 1024 * 1024 }
-});
+const MAX_AVATAR_BYTES = 1 * 1024 * 1024; // 1MB final limit
 
 router.get("/profile", requireLogin, (req, res) => {
   res.render("profile");
 });
 
-router.post("/profile/password", requireLogin, (req, res) => {
-  const user = getUser(req);
-  const { current, new: newPass, confirm } = req.body;
-
-  if (newPass !== confirm) {
-    return res.send("Passwords do not match");
-  }
-
-  const err = validatePassword(newPass, user.username);
-  if (err) return res.send(err);
-
-  const dbUser = db.prepare("SELECT password_hash FROM users WHERE id = ?").get(user.id);
-
-  if (!bcrypt.compareSync(current, dbUser.password_hash)) {
-    return res.send("Wrong password");
-  }
-
-  const hash = bcrypt.hashSync(newPass, 10);
-
-  db.prepare(`UPDATE users SET password_hash = ?, must_reset_password = 0, password_reset_token = 0 WHERE id = ?`)
-    .run(hash, user.id);
-
-  res.redirect("/profile");
-});
-
-router.post("/profile/update", requireLogin, upload.single("avatar"), (req, res) => {
+router.post("/profile/update", requireLogin, upload.single("avatar"), async (req, res) => {
   const user = getUser(req);
   const displayName = (req.body.display_name || "").trim();
-  const avatarPath = req.file ? `/uploads/avatars/${req.file.filename}` : null;
-
-  const { deleteAvatarFile } = require("../lib/files");
 
   const existingUser = db.prepare("SELECT avatar FROM users WHERE id = ?").get(user.id);
-  const oldAvatarPath = existingUser?.avatar || null;
+  const oldAvatar = existingUser?.avatar;
 
-  if (avatarPath) {
+  let newAvatarPath = null;
+
+  if (req.file) {
+    ensureAvatarDir();
+
+    const filename = crypto.randomUUID() + ".webp";
+    const outputPath = path.join(__dirname, "..", "storage", "avatars", filename);
+
+    const buffer = await sharp(req.file.buffer)
+    .rotate()
+    .resize(300, 300, { fit: "cover" })
+    .webp({ quality: 82 })
+    .toBuffer();
+
+    if (buffer.length > MAX_AVATAR_BYTES) {
+      return res.status(400).send("Avatar too large after processing");
+    }
+
+    await fs.promises.writeFile(outputPath, buffer);
+
+    newAvatarPath = `/uploads/avatars/${filename}`;
+  }
+
+  if (newAvatarPath) {
     db.prepare(`UPDATE users SET display_name = ?, avatar = ? WHERE id = ?`)
-    .run(displayName || null, avatarPath, user.id);
+    .run(displayName || null, newAvatarPath, user.id);
 
-    if (oldAvatarPath && oldAvatarPath !== avatarPath) {
-      deleteAvatarFile(oldAvatarPath);
+    if (oldAvatar && oldAvatar !== newAvatarPath) {
+      deleteAvatarFile(oldAvatar);
     }
   } else {
     db.prepare(`UPDATE users SET display_name = ? WHERE id = ?`)
-      .run(displayName || null, user.id);
+    .run(displayName || null, user.id);
   }
 
   res.redirect("/profile");

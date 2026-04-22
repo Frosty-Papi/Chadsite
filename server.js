@@ -64,7 +64,7 @@ app.set("layout", "layouts/main");
 app.set("view engine", "ejs");
 
 app.use(express.static("public"));
-app.use("/uploads", express.static("public/uploads"));
+app.use(require("./routes/uploads"));
 
 app.use(enforceAccountState);
 

@@ -4,6 +4,7 @@ const db = require("../db");
 const crypto = require("crypto");
 const { requireAdminAccess, requireSuperAdmin, getUser, canActOnTarget } = require("../middleware/auth");
 const { validatePassword, generateOneTimePassword } = require("../lib/passwords");
+const { deleteAvatarFile } = require("../lib/files");
 
 const router = express.Router();
 
@@ -71,6 +72,10 @@ router.post("/admin/user/delete", requireSuperAdmin, (req, res) => {
   const target = db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
   if (!target || target.role === "super_admin") {
     return res.status(400).send("Invalid target");
+  }
+
+  if (target?.avatar) {
+    deleteAvatarFile(target.avatar);
   }
 
   db.prepare("DELETE FROM users WHERE id = ?").run(userId);
