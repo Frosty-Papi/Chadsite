@@ -20,15 +20,20 @@ function getUser(req) {
   `).get(req.session.userId);
 }
 
+function wantsJSON(req) {
+  const accept = req.headers.accept || "";
+  return accept.includes("application/json") || req.xhr;
+}
+
 function respondUnauthorized(req, res) {
-  if (req.headers["content-type"] === "application/json" || req.path.startsWith("/admin/api")) {
+  if (wantsJSON(req) || req.path.startsWith("/admin")) {
     return res.status(401).json({ error: "Unauthorized" });
   }
   return res.redirect("/login");
 }
 
 function respondForbidden(req, res) {
-  if (req.headers["content-type"] === "application/json" || req.path.startsWith("/admin/api")) {
+  if (wantsJSON(req) || req.path.startsWith("/admin")) {
     return res.status(403).json({ error: "Forbidden" });
   }
   return res.status(403).send("Forbidden");
