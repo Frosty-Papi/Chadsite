@@ -54,9 +54,18 @@ router.post("/profile/update", requireLogin, upload.single("avatar"), (req, res)
   const displayName = (req.body.display_name || "").trim();
   const avatarPath = req.file ? `/uploads/avatars/${req.file.filename}` : null;
 
+  const { deleteAvatarFile } = require("../lib/files");
+
+  const existingUser = db.prepare("SELECT avatar FROM users WHERE id = ?").get(user.id);
+  const oldAvatarPath = existingUser?.avatar || null;
+
   if (avatarPath) {
     db.prepare(`UPDATE users SET display_name = ?, avatar = ? WHERE id = ?`)
-      .run(displayName || null, avatarPath, user.id);
+    .run(displayName || null, avatarPath, user.id);
+
+    if (oldAvatarPath && oldAvatarPath !== avatarPath) {
+      deleteAvatarFile(oldAvatarPath);
+    }
   } else {
     db.prepare(`UPDATE users SET display_name = ? WHERE id = ?`)
       .run(displayName || null, user.id);
