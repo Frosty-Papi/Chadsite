@@ -1,35 +1,30 @@
 const express = require("express");
 const db = require("../db");
-const { getUser } = require("../middleware/auth");
+const { getUser, isRoleAtLeast } = require("../middleware/auth");
 
 const router = express.Router();
 
 function requireServiceAccess(path) {
-    return (req, res, next) => {
-        const user = getUser(req);
-        if (!user) return res.redirect("/login");
+  return (req, res, next) => {
+    const user = getUser(req);
+    if (!user) return res.redirect("/login");
 
-        const service = db.prepare(
-            "SELECT * FROM services WHERE path = ?"
-        ).get(path);
+    const service = db.prepare("SELECT * FROM services WHERE path = ? AND is_enabled = 1").get(path);
 
-        if (!service) {
-            return res.status(404).send("Service not configured");
-        }
+    if (!service) {
+      return res.status(404).send("Service not configured");
+    }
 
-        const allowed = db.prepare(`
-        SELECT 1 FROM permissions
-        WHERE user_id = ? AND service_id = ?
-        `).get(user.id, service.id);
+    if (!isRoleAtLeast(user.role, service.min_role || "user")) {
+      return res.status(403).send("Access denied");
+    }
 
-        if (!allowed) return res.status(403).send("Access denied");
-
-        next();
-    };
+    next();
+  };
 }
 
 router.get("/deck", requireServiceAccess("/deck"), (req, res) => {
-    res.render("deck");
+  res.render("deck");
 });
 
 module.exports = router;
