@@ -1,0 +1,48 @@
+.deck-app {
+    padding: 20px;
+    color: #e2e8f0;
+}
+
+.section {
+    margin-bottom: 20px;
+}
+
+.zones {
+    display: flex;
+    gap: 20px;
+}
+
+.zone {
+    flex: 1;
+    background: #020617;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #1e293b;
+}
+
+.card {
+    background: #0f172a;
+    padding: 6px;
+    margin: 4px 0;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.selectable:hover {
+    background: #1e293b;
+}
+
+.btn {
+    margin: 4px;
+    padding: 6px 10px;
+    background: #1e293b;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+}
+
+.primary {
+    background: #38bdf8;
+    color: #020617;
+}
