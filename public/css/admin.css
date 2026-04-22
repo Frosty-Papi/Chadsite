@@ -1,0 +1,5 @@
+.tab.hidden{display:none}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;border-bottom:1px solid #1e293b}
+.actions-cell button{margin-right:4px}
+.service-row{display:flex;justify-content:space-between;margin-bottom:6px}
