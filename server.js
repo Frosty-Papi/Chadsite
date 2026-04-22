@@ -7,7 +7,6 @@ const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const csrf = require("csurf");
 
-
 const { enforceAccountState } = require("./middleware/auth");
 
 const app = express();
@@ -15,29 +14,20 @@ const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
-// Security headers, but without CSP until all inline JS is removed everywhere
 app.use(helmet({
   contentSecurityPolicy: false
 }));
 
-// Body limits
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(express.json({ limit: "1mb" }));
-
 app.use(cookieParser());
 
-// Basic CSRF protection via Origin check
-
-
-// Rate limit login
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100
 });
 
-// Session secret
-const SESSION_SECRET =
-process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
 
 app.use(session({
   secret: SESSION_SECRET,
@@ -51,39 +41,48 @@ app.use(session({
 }));
 
 const csrfProtection = csrf({ cookie: false });
-app.use(csrfProtection);
+app.use((req, res, next) => {
+  if (req.path === "/profile/update") return next();
+  return csrfProtection(req, res, next);
+});
 
 app.use((req, res, next) => {
-  res.locals.csrfToken = req.csrfToken();
+  res.locals.csrfToken = req.csrfToken ? req.csrfToken() : null;
   next();
 });
 
-// View engine
 app.use(expressLayouts);
 app.set("layout", "layouts/main");
 app.set("view engine", "ejs");
 
-// Static
 app.use(express.static("public"));
 app.use("/uploads", express.static("public/uploads"));
 
-// Enforce account state
 app.use(enforceAccountState);
 
-// Inject user + services
 const inject = require("./middleware/inject");
 app.use(inject);
 
-// Routes
 app.use("/login", loginLimiter);
 app.use("/", require("./routes/auth"));
 app.use("/", require("./routes/profile"));
 app.use("/", require("./routes/admin"));
 app.use("/", require("./routes/services"));
 
-// Home
 app.get("/", (req, res) => {
   res.render("index");
+});
+
+app.use((err, req, res, next) => {
+  if (err && err.code === "EBADCSRFTOKEN") {
+    if ((req.headers.accept || "").includes("application/json") || req.xhr) {
+      return res.status(403).json({ error: "Invalid CSRF token" });
+    }
+    return res.status(403).render("login", {
+      error: "Your session expired. Please refresh the page and try again."
+    });
+  }
+  return next(err);
 });
 
 app.listen(3300, () => {
