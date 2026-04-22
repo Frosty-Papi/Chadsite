@@ -1,218 +1,164 @@
-<h2 style="margin-bottom:1.5rem;">Admin Dashboard</h2>
+<h2>Admin Dashboard</h2>
 
-<div class="admin-grid">
-
-<script src="/js/admin.js"></script>
-
-  <!-- USERS -->
-  <div class="card">
-  <input id="user-search" placeholder="Search users..." oninput="filterUsers()" />
-    <h3>Users & Access</h3>
-
-<div id="user-list">
-  <% users.forEach(userItem => { %>
-    <div class="user-block" data-username="<%= userItem.username.toLowerCase() %>">
-
-        <div class="user-header">
-          <strong><%= userItem.username %></strong>
-
-
-          <!-- ROLE TOGGLE -->
-          <select onchange="updateRole(<%= userItem.id %>, this.value)">
-            <option value="user" <%= userItem.role === "user" ? "selected" : "" %>>User</option>
-            <option value="admin" <%= userItem.role === "admin" ? "selected" : "" %>>Admin</option>
-          </select>
-        </div>
-
-        <div class="permissions">
-          <% services.forEach(service => { %>
-            <label>
-              <input type="checkbox"
-                onchange="togglePermission(<%= userItem.id %>, <%= service.id %>, this.checked)"
-                <%= userItem.permissions.includes(service.id) ? "checked" : "" %>
-              />
-              <%= service.icon ? service.icon : "•" %> <%= service.name %>
-
-            </label>
-          <% }) %>
-
-        </div>
-        <button onclick="deleteUser(<%= userItem.id %>, <%= JSON.stringify(userItem.username) %>)" style="background:#ef4444; color:white;"> Delete
-        </button>
-      </div>
-    <% }) %>
-
-
-    <!-- ADD USER -->
-    <h4 style="margin-top:1rem;">Create User</h4>
-    <form id="create-user-form">
-      <input name="username" placeholder="Username" required />
-      <input name="password" type="password" placeholder="Password" required />
-      <button type="submit">Create</button>
-    </form>
-
-  </div>
+<div class="tabs">
+  <button onclick="showTab('users')">Users</button>
+  <% if (isSuperAdmin) { %>
+    <button onclick="showTab('services')">Services</button>
+  <% } %>
 </div>
-  <!-- SERVICES -->
-  <div class="card">
-    <h3>Services</h3>
 
-    <% services.forEach(service => { %>
+<div id="tab-users" class="tab">
+  <input id="search" placeholder="Search users..." oninput="filterUsers()" />
 
-    <div class="service-row">
-      <span>
-        <%= service.icon || "•" %> <%= service.name %>
-      </span>
+  <table>
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="user-table">
+      <% users.forEach(u => { %>
+        <tr data-name="<%= u.username.toLowerCase() %>">
+          <td><%= u.username %></td>
+          <td>
+            <% if (isSuperAdmin) { %>
+              <select onchange="setRole(<%= u.id %>, this.value)">
+                <option value="user" <%= u.role==='user'?'selected':'' %>>User</option>
+                <option value="admin" <%= u.role==='admin'?'selected':'' %>>Admin</option>
+              </select>
+            <% } else { %>
+              <%= u.role %>
+            <% } %>
+          </td>
+          <td>
+            <% if (u.is_disabled) { %>
+              Disabled
+            <% } else if (u.must_reset_password) { %>
+              Reset Required
+            <% } else { %>
+              Active
+            <% } %>
+          </td>
+          <td>
+            <button onclick="disableUser(<%= u.id %>)">Disable</button>
+            <button onclick="enableUser(<%= u.id %>)">Enable</button>
+            <button onclick="resetPassword(<%= u.id %>)">Reset PW</button>
+            <button onclick="forceReset(<%= u.id %>)">Force Reset</button>
+            <% if (isSuperAdmin) { %>
+              <button onclick="deleteUser(<%= u.id %>)">Delete</button>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
 
-      <div>
-      <button onclick="editService(
-        <%= service.id %>,
-        <%= JSON.stringify(service.name) %>,
-        <%= JSON.stringify(service.path) %>,
-        <%= JSON.stringify(service.icon || "") %>,
-        <%= service.is_external %>
-      )">
-          Edit
-        </button>
-        <button onclick="deleteService(<%= service.id %>)">Delete</button>
-      </div>
+  <% if (isSuperAdmin) { %>
+  <h3>Create User</h3>
+  <form onsubmit="createUser(event)">
+    <input name="username" placeholder="Username" required />
+    <input name="password" type="password" placeholder="Password" required />
+    <button>Create</button>
+  </form>
+  <% } %>
+</div>
+
+<% if (isSuperAdmin) { %>
+<div id="tab-services" class="tab hidden">
+  <h3>Services</h3>
+
+  <% services.forEach(s => { %>
+    <div>
+      <%= s.name %> (<%= s.min_role %>)
+      <button onclick="deleteService(<%= s.id %>)">Delete</button>
     </div>
+  <% }) %>
 
-    <% }) %>
-
-    <!-- ADD SERVICE -->
-    <h4 style="margin-top:1rem;">Add Service</h4>
-
-    <form id="create-service-form">
-      <input name="name" placeholder="Service Name" required />
-      <input name="path" placeholder="/path or https://url" required />
-      <input name="icon" placeholder="Icon" />
-      <label>
-        <input type="checkbox" name="is_external" />
-        External
-      </label>
-      <button type="submit">Add</button>
-    </form>
-  </div>
-
+  <form onsubmit="createService(event)">
+    <input name="name" placeholder="Name" required />
+    <input name="path" placeholder="Path" required />
+    <select name="min_role">
+      <option value="user">User</option>
+      <option value="admin">Admin</option>
+    </select>
+    <button>Add</button>
+  </form>
 </div>
+<% } %>
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.add('hidden'));
+  document.getElementById('tab-' + name).classList.remove('hidden');
+}
+
+function filterUsers() {
+  const val = document.getElementById('search').value.toLowerCase();
+  document.querySelectorAll('#user-table tr').forEach(r => {
+    r.style.display = r.dataset.name.includes(val) ? '' : 'none';
+  });
+}
+
+async function api(url, body) {
+  return fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+}
+
+async function createUser(e) {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target));
+  const res = await api('/admin/user', data);
+  location.reload();
+}
+
+async function deleteUser(id) {
+  if (!confirm('Delete user?')) return;
+  await api('/admin/user/delete', { userId:id });
+  location.reload();
+}
+
+async function setRole(id, role) {
+  await api('/admin/user/role', { userId:id, role });
+}
+
+async function disableUser(id) {
+  await api('/admin/user/disable', { userId:id, mode:'permanent' });
+  location.reload();
+}
+
+async function enableUser(id) {
+  await api('/admin/user/enable', { userId:id });
+  location.reload();
+}
+
+async function resetPassword(id) {
+  const res = await api('/admin/user/reset-password', { userId:id });
+  const json = await res.json();
+  alert('Temp password: ' + json.password);
+}
+
+async function forceReset(id) {
+  await api('/admin/user/force-reset', { userId:id });
+  alert('User will reset password on next login');
+}
+
+async function createService(e) {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target));
+  await api('/admin/service', data);
+  location.reload();
+}
+
+async function deleteService(id) {
+  await api('/admin/service/delete', { serviceId:id });
+  location.reload();
+}
+</script>
 
 <style>
-.admin-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 2rem;
-}
-
-.card {
-  background: #020617;
-  border: 1px solid #1e293b;
-  border-radius: 12px;
-  padding: 1.5rem;
-}
-
-.user-block {
-  border-top: 1px solid #1e293b;
-  padding: 1rem 0;
-}
-
-.user-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.permissions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
-}
-
-.service-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-
-input {
-  width: 100%;
-  padding: 0.5rem;
-  margin-bottom: 0.5rem;
-  background: #0f172a;
-  border: 1px solid #1e293b;
-  color: white;
-  border-radius: 6px;
-}
-
-button {
-  padding: 0.4rem 0.8rem;
-  background: #38bdf8;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
+.tab.hidden { display:none; }
+table { width:100%; }
+th,td { padding:6px; }
 </style>
-
-<div id="modal" class="modal hidden">
-  <div class="modal-content">
-    <p id="modal-text">Are you sure?</p>
-    <div class="modal-actions">
-      <button onclick="confirmAction()">Yes</button>
-      <button onclick="closeModal()">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<div id="edit-modal" class="modal hidden">
-  <div class="modal-content">
-    <h3>Edit Service</h3>
-
-    <input id="edit-name" placeholder="Name" />
-    <input id="edit-path" placeholder="Path" />
-    <input id="edit-icon" placeholder="Icon" />
-
-    <label>
-      <input type="checkbox" id="edit-external" />
-      External
-    </label>
-
-    <div class="modal-actions">
-      <button onclick="saveEdit()">Save</button>
-      <button onclick="closeEdit()">Cancel</button>
-    </div>
-  </div><!--GLOBAL FUNCTIONS (IMPORTANT)-->
-</div>
-
-<style>
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hidden {
-  display: none;
-}
-
-.modal-content {
-  background: #020617;
-  padding: 1.5rem;
-  border-radius: 10px;
-  border: 1px solid #1e293b;
-}
-
-.modal-actions {
-  margin-top: 1rem;
-  display: flex;
-  gap: 1rem;
-}
-</style>
-
-
