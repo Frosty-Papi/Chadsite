@@ -1,48 +1,81 @@
-.deck-app {
-    padding: 20px;
-    color: #e2e8f0;
+.deck-app.shell {
+  padding: 20px;
+  color: #e2e8f0;
 }
 
-.section {
-    margin-bottom: 20px;
+.deck-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
 }
 
-.zones {
-    display: flex;
-    gap: 20px;
+.panel {
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
 }
 
-.zone {
-    flex: 1;
-    background: #020617;
-    padding: 10px;
-    border-radius: 10px;
-    border: 1px solid #1e293b;
+.zones-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
 }
 
-.card {
-    background: #0f172a;
-    padding: 6px;
-    margin: 4px 0;
-    border-radius: 6px;
-    cursor: pointer;
+.two-col-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
 }
 
-.selectable:hover {
-    background: #1e293b;
+.card-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.card-box {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.card-box.selected {
+  outline: 2px solid #38bdf8;
 }
 
 .btn {
-    margin: 4px;
-    padding: 6px 10px;
-    background: #1e293b;
-    border: none;
-    border-radius: 6px;
-    color: white;
-    cursor: pointer;
+  background: #1e293b;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  padding: 6px 10px;
+  cursor: pointer;
 }
 
-.primary {
-    background: #38bdf8;
-    color: #020617;
+.btn.primary {
+  background: #38bdf8;
+  color: #020617;
+}
+
+.btn:hover {
+  background: #334155;
+}
+
+.muted {
+  color: #94a3b8;
+}
+
+@media (max-width: 900px) {
+  .zones-grid,
+  .two-col-grid {
+    grid-template-columns: 1fr;
+  }
 }
