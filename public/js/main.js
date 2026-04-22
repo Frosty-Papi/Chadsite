@@ -10,7 +10,7 @@ document.addEventListener("click", (e) => {
     const dropdown = document.getElementById("profile-dropdown");
     if (!dropdown) return;
 
-    const trigger = e.target.closest("button[onclick='toggleDropdown()']");
+    const trigger = e.target.closest(".profile-trigger");
     const insideDropdown = e.target.closest("#profile-dropdown");
 
     if (!trigger && !insideDropdown) {
