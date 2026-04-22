@@ -9,14 +9,12 @@
     <% if (user.avatar) { %>
       <img src="<%= user.avatar %>" />
     <% } else { %>
-      <div class="fallback">
-        <%= (user.display_name || user.username).charAt(0).toUpperCase() %>
-      </div>
+      <div class="fallback"><%= (user.display_name || user.username).charAt(0).toUpperCase() %></div>
     <% } %>
   </div>
 
   <form method="POST" action="/profile/update" enctype="multipart/form-data">
-  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <label>Display Name</label>
     <input name="display_name" value="<%= user.display_name || '' %>" />
 
@@ -27,20 +25,19 @@
 
     <button type="submit">Save</button>
   </form>
-
 </div>
 
 <h3>Change Password</h3>
 
 <form method="POST" action="/profile/password" id="password-form">
-<input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
   <input name="current" type="password" placeholder="Current password" required />
   <input name="new" type="password" placeholder="New password" required />
   <input name="confirm" type="password" placeholder="Confirm password" required />
   <button type="submit">Update Password</button>
 </form>
 
-<div style="margin-top: 1rem;">
+<div class="logout-row">
   <form method="POST" action="/logout">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <button type="submit" class="logout-btn">Logout</button>
