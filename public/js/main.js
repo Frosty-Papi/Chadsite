@@ -1,24 +1,26 @@
-function toggleDropdown() {
-    const el = document.getElementById("profile-dropdown");
-    if (!el) return;
-    el.style.display = el.style.display === "block" ? "none" : "block";
-}
-
-window.toggleDropdown = toggleDropdown;
-
-document.addEventListener("click", (e) => {
-    const dropdown = document.getElementById("profile-dropdown");
-    if (!dropdown) return;
-
-    const trigger = e.target.closest(".profile-trigger");
-    const insideDropdown = e.target.closest("#profile-dropdown");
-
-    if (!trigger && !insideDropdown) {
-        dropdown.style.display = "none";
-    }
-});
-
 document.addEventListener("DOMContentLoaded", () => {
+    const trigger = document.querySelector(".profile-trigger");
+    const dropdown = document.getElementById("profile-dropdown");
+
+    if (trigger && dropdown) {
+        trigger.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isOpen = dropdown.style.display === "block";
+            dropdown.style.display = isOpen ? "none" : "block";
+        });
+    }
+
+    document.addEventListener("click", (e) => {
+        if (!dropdown) return;
+
+        const insideDropdown = e.target.closest("#profile-dropdown");
+        const insideTrigger = e.target.closest(".profile-trigger");
+
+        if (!insideDropdown && !insideTrigger) {
+            dropdown.style.display = "none";
+        }
+    });
+
     let lastScrollY = window.scrollY;
     let timeout;
 
