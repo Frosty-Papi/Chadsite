@@ -6,6 +6,7 @@ const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const csrf = require("csurf");
+const path = require("path");
 
 const { enforceAccountState } = require("./middleware/auth");
 const { cleanupOrphanAvatars } = require("./jobs/cleanupAvatars");
@@ -64,6 +65,7 @@ app.set("layout", "layouts/main");
 app.set("view engine", "ejs");
 
 app.use(express.static("public"));
+app.use("/deck-assets", express.static(path.join(__dirname, "views", "deck")));
 app.use(require("./routes/uploads"));
 
 app.use(enforceAccountState);
@@ -77,14 +79,15 @@ app.use("/", require("./routes/profile"));
 app.use("/", require("./routes/admin"));
 app.use("/", require("./routes/services"));
 
+app.get("/deck-modern", (req, res) => {
+  res.render("deck-modern");
+});
+
 app.get("/", (req, res) => {
   res.render("index");
 });
 
-// Run cleanup at startup
 cleanupOrphanAvatars().catch(console.error);
-
-// Run cleanup every 6 hours
 setInterval(() => {
   cleanupOrphanAvatars().catch(console.error);
 }, 6 * 60 * 60 * 1000);
