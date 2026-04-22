@@ -74,8 +74,8 @@ function updateBlessCurseCounts() {
   state.curses = state.modifiersDrawPile.filter(isCurse).length;
 }
 
-function saveState() {
-  const payload = {
+function buildPayload() {
+  return {
     turn: state.turn,
     level: state.level,
     abilityCategoryName: state.abilityCategory?.name || null,
@@ -96,51 +96,79 @@ function saveState() {
       used: i.used || 0,
     })),
   };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(buildPayload()));
+}
+
+function applyPayload(data) {
+  state.turn = data.turn || 1;
+  state.level = data.level || 1;
+
+  if (data.abilityCategoryName) {
+    state.abilityCategory = state.abilities.find(a => a.name === data.abilityCategoryName) || null;
+  } else {
+    state.abilityCategory = null;
+  }
+
+  state.abilitiesChosen = (data.abilitiesChosen || []).map(findAbilityByName).filter(Boolean);
+  state.cardsInHand = (data.cardsInHand || []).map(findAbilityByName).filter(Boolean);
+  state.cardsDiscarded = (data.cardsDiscarded || []).map(findAbilityByName).filter(Boolean);
+  state.cardsDestroyed = (data.cardsDestroyed || []).map(findAbilityByName).filter(Boolean);
+  state.cardsOnBoard = (data.cardsOnBoard || []).map(entry => {
+    const card = findAbilityByName(entry.name);
+    if (card) card.duration = entry.duration ?? 0;
+    return card;
+  }).filter(Boolean);
+  state.twoAbilitiesSelected = (data.twoAbilitiesSelected || []).map(findAbilityByName).filter(Boolean);
+
+  state.modifiersChosen = (data.modifiersChosen || []).map(findModifierByName).filter(Boolean);
+  state.modifiersDrawPile = (data.modifiersDrawPile || []).map(findModifierByName).filter(Boolean);
+  state.modifiersDiscardPile = (data.modifiersDiscardPile || []).map(findModifierByName).filter(Boolean);
+  state.lastDrawnModifier = data.lastDrawnModifier ? findModifierByName(data.lastDrawnModifier) : null;
+
+  state.gearChosen = (data.gearChosen || []).map(entry => {
+    const item = findGearByName(entry.name);
+    if (!item) return null;
+    item.played = !!entry.played;
+    item.lost = !!entry.lost;
+    item.used = entry.used || 0;
+    return item;
+  }).filter(Boolean);
+
+  updateBlessCurseCounts();
 }
 
 function loadSavedState() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return;
-
   try {
-    const data = JSON.parse(raw);
-    state.turn = data.turn || 1;
-    state.level = data.level || 1;
-
-    if (data.abilityCategoryName) {
-      state.abilityCategory = state.abilities.find(a => a.name === data.abilityCategoryName) || null;
-    }
-
-    state.abilitiesChosen = (data.abilitiesChosen || []).map(findAbilityByName).filter(Boolean);
-    state.cardsInHand = (data.cardsInHand || []).map(findAbilityByName).filter(Boolean);
-    state.cardsDiscarded = (data.cardsDiscarded || []).map(findAbilityByName).filter(Boolean);
-    state.cardsDestroyed = (data.cardsDestroyed || []).map(findAbilityByName).filter(Boolean);
-    state.cardsOnBoard = (data.cardsOnBoard || []).map(entry => {
-      const card = findAbilityByName(entry.name);
-      if (card) card.duration = entry.duration ?? 0;
-      return card;
-    }).filter(Boolean);
-    state.twoAbilitiesSelected = (data.twoAbilitiesSelected || []).map(findAbilityByName).filter(Boolean);
-
-    state.modifiersChosen = (data.modifiersChosen || []).map(findModifierByName).filter(Boolean);
-    state.modifiersDrawPile = (data.modifiersDrawPile || []).map(findModifierByName).filter(Boolean);
-    state.modifiersDiscardPile = (data.modifiersDiscardPile || []).map(findModifierByName).filter(Boolean);
-    state.lastDrawnModifier = data.lastDrawnModifier ? findModifierByName(data.lastDrawnModifier) : null;
-
-    state.gearChosen = (data.gearChosen || []).map(entry => {
-      const item = findGearByName(entry.name);
-      if (!item) return null;
-      item.played = !!entry.played;
-      item.lost = !!entry.lost;
-      item.used = entry.used || 0;
-      return item;
-    }).filter(Boolean);
-
-    updateBlessCurseCounts();
+    applyPayload(JSON.parse(raw));
   } catch (e) {
     console.error('Failed to load deck state', e);
   }
+}
+
+function exportState() {
+  const blob = new Blob([JSON.stringify(buildPayload(), null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'deck-modern-export.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importStateFile(file) {
+  file.text().then(text => {
+    const data = JSON.parse(text);
+    applyPayload(data);
+    saveState();
+    render();
+  }).catch(() => {
+    alert('Import failed');
+  });
 }
 
 /* ================= MODIFIERS ================= */
@@ -157,7 +185,7 @@ function initModifiers() {
 function drawModifier() {
   if (!state.modifiersDrawPile.length) return;
 
-  if (state.lastDrawnModifier) {
+  if (state.lastDrawnModifier && !state.modifiersDiscardPile.includes(state.lastDrawnModifier)) {
     state.modifiersDiscardPile.unshift(state.lastDrawnModifier);
   }
 
@@ -166,7 +194,7 @@ function drawModifier() {
 
   if (isCurse(card) || isBless(card)) {
     state.modifiersChosen = state.modifiersChosen.filter(c => c !== card);
-  } else {
+  } else if (!state.modifiersDiscardPile.includes(card)) {
     state.modifiersDiscardPile.unshift(card);
   }
 
@@ -174,6 +202,7 @@ function drawModifier() {
 
   if (isNull(card) || isTwoX(card)) {
     shuffleModifiers();
+    return;
   }
 
   saveState();
@@ -251,7 +280,7 @@ function restoreGear(item) {
   render();
 }
 
-/* ================= EXISTING GAME ================= */
+/* ================= GAME ================= */
 
 function chooseClass(index) {
   const category = state.abilities[index];
@@ -313,15 +342,65 @@ function moveCard(card, from, to) {
   if (!to.includes(card)) to.push(card);
 }
 
+function keepOnBoard(card, duration = -1) {
+  card.duration = duration;
+  moveCard(card, state.cardsDiscarded, state.cardsOnBoard);
+  saveState();
+  render();
+}
+
+function destroyCard(card) {
+  moveCard(card, state.cardsDiscarded, state.cardsDestroyed);
+  state.twoAbilitiesSelected = state.twoAbilitiesSelected.filter(c => c !== card);
+  saveState();
+  render();
+}
+
+function recoverCard(card) {
+  if (state.cardsDiscarded.includes(card)) moveCard(card, state.cardsDiscarded, state.cardsInHand);
+  if (state.cardsDestroyed.includes(card)) moveCard(card, state.cardsDestroyed, state.cardsInHand);
+  saveState();
+  render();
+}
+
+function advanceBoardDurations() {
+  const toDiscard = [];
+  state.cardsOnBoard.forEach(card => {
+    if (typeof card.duration === 'number' && card.duration > 0) {
+      card.duration -= 1;
+      if (card.duration === 0) toDiscard.push(card);
+    }
+  });
+  toDiscard.forEach(card => moveCard(card, state.cardsOnBoard, state.cardsDiscarded));
+}
+
 function playSelected() {
-  if (state.twoAbilitiesSelected.length !== 2) return;
+  if (state.twoAbilitiesSelected.length !== 2) {
+    alert('Select exactly two cards to play.');
+    return;
+  }
 
   state.twoAbilitiesSelected.forEach(card => {
     moveCard(card, state.cardsInHand, state.cardsDiscarded);
   });
 
   state.twoAbilitiesSelected = [];
-  state.turn++;
+  state.turn += 1;
+  advanceBoardDurations();
+  saveState();
+  render();
+}
+
+function shortRest() {
+  if (state.cardsDiscarded.length < 2) {
+    alert('Not enough discarded cards to rest.');
+    return;
+  }
+  const idx = Math.floor(Math.random() * state.cardsDiscarded.length);
+  const lost = state.cardsDiscarded.splice(idx, 1)[0];
+  if (lost) state.cardsDestroyed.push(lost);
+  state.cardsInHand.push(...state.cardsDiscarded);
+  state.cardsDiscarded = [];
   saveState();
   render();
 }
@@ -334,16 +413,58 @@ function newGame() {
   state.twoAbilitiesSelected = [];
   state.turn = 1;
   state.gearChosen.forEach(resetGearItem);
-  shuffleModifiers();
+  initModifiers();
   saveState();
   render();
 }
 
 /* ================= RENDER ================= */
 
+function renderClassButtons() {
+  return `
+    <div class="class-grid">
+      ${state.abilities.map((cat, i) => `<button class="btn small ${state.abilityCategory?.name === cat.name ? 'active' : ''}" data-class="${i}">${cat.name}</button>`).join('')}
+    </div>
+  `;
+}
+
+function renderAbilityPool() {
+  if (!state.abilityCategory) return '<p class="muted">Choose a class to build a deck.</p>';
+  return `
+    <div class="card-list">
+      ${(state.abilityCategory.cards || []).filter(card => card.level <= state.level).map(card => `
+        <button class="card-btn ${state.abilitiesChosen.includes(card) ? 'chosen' : ''}" data-add="${card.name}">${card.name}<span class="muted"> L${card.level}</span></button>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderZone(title, cards, type) {
+  return `
+    <section class="panel zone-panel">
+      <h2>${title}</h2>
+      <div class="card-list stacked">
+        ${cards.length ? cards.map(card => `
+          <div class="card-box ${state.twoAbilitiesSelected.includes(card) ? 'selected' : ''}" ${type ? `data-${type}="${card.name}"` : ''}>
+            <div class="card-title">${card.name}</div>
+            ${typeof card.duration === 'number' && card.duration !== 0 ? `<div class="muted">duration: ${card.duration}</div>` : ''}
+            ${title === 'Discard' ? `<div class="row-actions">
+              <button class="btn small" data-board="${card.name}">Board</button>
+              <button class="btn small" data-round="${card.name}">Round</button>
+              <button class="btn small" data-destroy="${card.name}">Lose</button>
+              <button class="btn small" data-recover="${card.name}">Recover</button>
+            </div>` : ''}
+            ${title === 'Destroyed' ? `<div class="row-actions"><button class="btn small" data-recover="${card.name}">Recover</button></div>` : ''}
+          </div>
+        `).join('') : '<p class="muted">Empty</p>'}
+      </div>
+    </section>
+  `;
+}
+
 function renderModifiers() {
   return `
-    <div class="panel">
+    <section class="panel">
       <h2>Modifiers</h2>
       <div class="toolbar-actions">
         <button id="drawMod" class="btn">Draw</button>
@@ -354,7 +475,7 @@ function renderModifiers() {
       <p>Last: ${state.lastDrawnModifier?.name || 'None'}</p>
       <p>Deck: ${state.modifiersDrawPile.length} | Discard: ${state.modifiersDiscardPile.length}</p>
       <p>Blessings: ${state.blessings} | Curses: ${state.curses}</p>
-    </div>
+    </section>
   `;
 }
 
@@ -362,11 +483,11 @@ function renderGear() {
   if (!state.allGear.length) return '';
 
   const chosen = `
-    <div class="panel">
+    <section class="panel">
       <h2>Chosen Gear</h2>
       ${(state.gearChosen.map(item => `
         <div class="gear-row">
-          <div>${item.name} <span class="muted">used:${item.used || 0}</span></div>
+          <div>${item.name} <span class="muted">used:${item.used || 0}${item.played ? item.lost ? ' · lost' : ' · tapped' : ''}</span></div>
           <div class="row-actions">
             <button class="btn small" data-gear-use="${item.name}">+1</button>
             <button class="btn small" data-gear-tap="${item.name}">Tap</button>
@@ -375,21 +496,21 @@ function renderGear() {
           </div>
         </div>
       `).join('')) || '<p class="muted">No gear selected</p>'}
-    </div>
+    </section>
   `;
 
   const available = `
-    <div class="panel">
-      <h2>Gear</h2>
+    <section class="panel">
+      <h2>Gear Library</h2>
       ${state.allGear.map(cat => `
         <div>
-          <h4>${cat.name}</h4>
-          <div class="row-actions">
-            ${cat.items.slice(0, 5).map(item => `<button class="btn small" data-gear="${item.name}">${item.name}</button>`).join('')}
+          <h3>${cat.name}</h3>
+          <div class="row-actions wrap">
+            ${cat.items.slice(0, 8).map(item => `<button class="btn small ${state.gearChosen.includes(item) ? 'active' : ''}" data-gear="${item.name}">${item.name}</button>`).join('')}
           </div>
         </div>
       `).join('')}
-    </div>
+    </section>
   `;
 
   return chosen + available;
@@ -399,15 +520,43 @@ function render() {
   const root = document.getElementById('app');
 
   root.innerHTML = `
-    <div class="deck-app">
-      <h1>Deck</h1>
-      <p>Turn: ${state.turn}</p>
-      ${renderModifiers()}
-      ${renderGear()}
-      <div class="toolbar-actions">
-        <button id="play" class="btn primary">Play Selected</button>
-        <button id="newGame" class="btn">New Game</button>
-        <button id="saveDeckState" class="btn">Save</button>
+    <div class="deck-app shell">
+      <div class="deck-toolbar">
+        <div>
+          <h1>Deck Modern</h1>
+          <p class="muted">Turn: ${state.turn} · Class: ${state.abilityCategory?.name || 'none'} · Deck ${state.abilitiesChosen.length}/${state.abilityCategory?.max || 0}</p>
+        </div>
+        <div class="toolbar-actions wrap">
+          <button id="play" class="btn primary">Play Selected</button>
+          <button id="shortRest" class="btn">Short Rest</button>
+          <button id="newGame" class="btn">New Game</button>
+          <button id="saveDeckState" class="btn">Save</button>
+          <button id="exportDeckState" class="btn">Export</button>
+          <button id="triggerImportDeckState" class="btn">Import</button>
+          <input id="importDeckState" type="file" accept="application/json" hidden>
+        </div>
+      </div>
+
+      <section class="panel">
+        <h2>Classes</h2>
+        ${renderClassButtons()}
+      </section>
+
+      <section class="panel">
+        <h2>Abilities</h2>
+        ${renderAbilityPool()}
+      </section>
+
+      <div class="zones-grid">
+        ${renderZone('Hand', state.cardsInHand, 'pick')}
+        ${renderZone('Discard', state.cardsDiscarded, '')}
+        ${renderZone('Destroyed', state.cardsDestroyed, '')}
+        ${renderZone('On Board', state.cardsOnBoard, '')}
+      </div>
+
+      <div class="two-col-grid">
+        ${renderModifiers()}
+        ${renderGear()}
       </div>
     </div>
   `;
@@ -418,6 +567,56 @@ function render() {
 /* ================= EVENTS ================= */
 
 function bindEvents() {
+  document.querySelectorAll('[data-class]').forEach(btn => {
+    btn.addEventListener('click', () => chooseClass(Number(btn.dataset.class)));
+  });
+
+  document.querySelectorAll('[data-add]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const card = findAbilityByName(btn.dataset.add);
+      if (card) toggleAbility(card);
+    });
+  });
+
+  document.querySelectorAll('[data-pick]').forEach(box => {
+    box.addEventListener('click', () => {
+      const card = findAbilityByName(box.dataset.pick);
+      if (card) toggleSelected(card);
+    });
+  });
+
+  document.querySelectorAll('[data-board]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const card = findAbilityByName(btn.dataset.board);
+      if (card) keepOnBoard(card, -1);
+    });
+  });
+
+  document.querySelectorAll('[data-round]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const card = findAbilityByName(btn.dataset.round);
+      if (card) keepOnBoard(card, 1);
+    });
+  });
+
+  document.querySelectorAll('[data-destroy]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const card = findAbilityByName(btn.dataset.destroy);
+      if (card) destroyCard(card);
+    });
+  });
+
+  document.querySelectorAll('[data-recover]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const card = findAbilityByName(btn.dataset.recover);
+      if (card) recoverCard(card);
+    });
+  });
+
   document.getElementById('drawMod')?.addEventListener('click', drawModifier);
   document.getElementById('shuffleMod')?.addEventListener('click', shuffleModifiers);
   document.getElementById('addBless')?.addEventListener('click', () => addSpecialModifier(BLESS_NAME));
@@ -459,8 +658,15 @@ function bindEvents() {
   });
 
   document.getElementById('play')?.addEventListener('click', playSelected);
+  document.getElementById('shortRest')?.addEventListener('click', shortRest);
   document.getElementById('newGame')?.addEventListener('click', newGame);
   document.getElementById('saveDeckState')?.addEventListener('click', saveState);
+  document.getElementById('exportDeckState')?.addEventListener('click', exportState);
+  document.getElementById('triggerImportDeckState')?.addEventListener('click', () => document.getElementById('importDeckState')?.click());
+  document.getElementById('importDeckState')?.addEventListener('change', e => {
+    const file = e.target.files?.[0];
+    if (file) importStateFile(file);
+  });
 }
 
 function init() {
