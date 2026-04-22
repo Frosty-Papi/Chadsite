@@ -1,16 +1,5 @@
-function showTab(name) {
-    document.querySelectorAll(".tab").forEach((t) => t.classList.add("hidden"));
-    const tab = document.getElementById(`tab-${name}`);
-    if (tab) tab.classList.remove("hidden");
-}
-
-function filterUsers() {
-    const input = document.getElementById("search");
-    const val = (input?.value || "").toLowerCase();
-
-    document.querySelectorAll("#user-table tr").forEach((r) => {
-        r.style.display = r.dataset.name.includes(val) ? "" : "none";
-    });
+function getCSRF() {
+    return document.querySelector('meta[name="csrf-token"]')?.content || "";
 }
 
 async function api(url, body) {
@@ -18,142 +7,69 @@ async function api(url, body) {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "CSRF-Token": window.csrfToken
+            "CSRF-Token": getCSRF()
         },
         body: JSON.stringify(body)
     });
 }
 
-async function createUser(e) {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.target));
-    const res = await api("/admin/user", data);
-
-    if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        alert(json.error || "Failed to create user");
-        return;
-    }
-
-    location.reload();
-}
-
-async function deleteUser(id) {
-    if (!confirm("Delete user?")) return;
-    const res = await api("/admin/user/delete", { userId: id });
-
-    if (!res.ok) {
-        alert(await res.text());
-        return;
-    }
-
-    location.reload();
-}
-
-async function setRole(id, role) {
-    const res = await api("/admin/user/role", { userId: id, role });
-    if (!res.ok) alert("Failed to update role");
-}
-
-async function disableUser(id) {
-    const res = await api("/admin/user/disable", {
-        userId: id,
-        mode: "permanent"
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll("[data-tab]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".tab").forEach(t => t.classList.add("hidden"));
+            document.getElementById("tab-" + btn.dataset.tab)?.classList.remove("hidden");
+        });
     });
 
-    if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        alert(json.error || "Failed to disable user");
-        return;
-    }
+    document.querySelectorAll(".role-select").forEach(sel => {
+        sel.addEventListener("change", () => api("/admin/user/role", { userId: sel.dataset.id, role: sel.value }));
+    });
 
-    location.reload();
-}
+    document.querySelectorAll(".disable-btn").forEach(btn => {
+        btn.addEventListener("click", () => api("/admin/user/disable", { userId: btn.dataset.id, mode: "permanent" }).then(()=>location.reload()));
+    });
 
-async function enableUser(id) {
-    const res = await api("/admin/user/enable", { userId: id });
+    document.querySelectorAll(".enable-btn").forEach(btn => {
+        btn.addEventListener("click", () => api("/admin/user/enable", { userId: btn.dataset.id }).then(()=>location.reload()));
+    });
 
-    if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        alert(json.error || "Failed to enable user");
-        return;
-    }
+    document.querySelectorAll(".reset-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+            const res = await api("/admin/user/reset-password", { userId: btn.dataset.id });
+            const json = await res.json();
+            alert(json.password || "Failed");
+        });
+    });
 
-    location.reload();
-}
+    document.querySelectorAll(".force-reset-btn").forEach(btn => {
+        btn.addEventListener("click", () => api("/admin/user/force-reset", { userId: btn.dataset.id }));
+    });
 
-async function resetPassword(id) {
-    const res = await api("/admin/user/reset-password", { userId: id });
-    const json = await res.json().catch(() => ({}));
+    document.querySelectorAll(".delete-btn").forEach(btn => {
+        btn.addEventListener("click", () => api("/admin/user/delete", { userId: btn.dataset.id }).then(()=>location.reload()));
+    });
 
-    if (!res.ok) {
-        alert(json.error || "Failed to reset password");
-        return;
-    }
-
-    alert(`Temp password: ${json.password}`);
-}
-
-async function forceReset(id) {
-    const res = await api("/admin/user/force-reset", { userId: id });
-
-    if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        alert(json.error || "Failed to force reset");
-        return;
-    }
-
-    alert("User will reset password on next login");
-}
-
-async function createService(e) {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.target));
-    const res = await api("/admin/service", data);
-
-    if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        alert(json.error || "Failed to create service");
-        return;
-    }
-
-    location.reload();
-}
-
-async function deleteService(id) {
-    const res = await api("/admin/service/delete", { serviceId: id });
-
-    if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        alert(json.error || "Failed to delete service");
-        return;
-    }
-
-    location.reload();
-}
-
-window.showTab = showTab;
-window.deleteUser = deleteUser;
-window.setRole = setRole;
-window.disableUser = disableUser;
-window.enableUser = enableUser;
-window.resetPassword = resetPassword;
-window.forceReset = forceReset;
-window.deleteService = deleteService;
-
-document.addEventListener("DOMContentLoaded", () => {
-    const search = document.getElementById("search");
-    if (search) {
-        search.addEventListener("input", filterUsers);
-    }
+    document.querySelectorAll(".delete-service-btn").forEach(btn => {
+        btn.addEventListener("click", () => api("/admin/service/delete", { serviceId: btn.dataset.id }).then(()=>location.reload()));
+    });
 
     const createUserForm = document.getElementById("create-user-form");
     if (createUserForm) {
-        createUserForm.addEventListener("submit", createUser);
+        createUserForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const data = Object.fromEntries(new FormData(createUserForm));
+            await api("/admin/user", data);
+            location.reload();
+        });
     }
 
     const createServiceForm = document.getElementById("create-service-form");
     if (createServiceForm) {
-        createServiceForm.addEventListener("submit", createService);
+        createServiceForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const data = Object.fromEntries(new FormData(createServiceForm));
+            await api("/admin/service", data);
+            location.reload();
+        });
     }
 });
