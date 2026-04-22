@@ -1,21 +1,18 @@
 const db = require("../db");
-const { getUser } = require("./auth");
+const { getUser, isRoleAtLeast } = require("./auth");
 
 module.exports = (req, res, next) => {
-    const user = getUser(req);
+  const user = getUser(req);
 
-    res.locals.user = user;
+  res.locals.user = user;
 
-    if (user) {
-        res.locals.services = db.prepare(`
-        SELECT s.*
-        FROM services s
-        JOIN permissions p ON p.service_id = s.id
-        WHERE p.user_id = ?
-        `).all(user.id);
-    } else {
-        res.locals.services = [];
-    }
+  if (user) {
+    const services = db.prepare("SELECT * FROM services WHERE is_enabled = 1 ORDER BY sort_order, name").all();
 
-    next();
+    res.locals.services = services.filter(s => isRoleAtLeast(user.role, s.min_role || "user"));
+  } else {
+    res.locals.services = [];
+  }
+
+  next();
 };
