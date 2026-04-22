@@ -5,10 +5,6 @@
   "scripts": {
     "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.9.0",
@@ -16,6 +12,8 @@
     "express": "^5.2.1",
     "express-ejs-layouts": "^2.5.1",
     "express-session": "^1.19.0",
+    "helmet": "^7.0.0",
+    "express-rate-limit": "^7.0.0",
     "multer": "^2.1.1"
   }
 }
