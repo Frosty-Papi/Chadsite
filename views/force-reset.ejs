@@ -1,6 +1,9 @@
 <h2>Reset Your Password</h2>
 
 <form method="POST" action="/force-reset">
+
+  <link rel="stylesheet" href="/css/reset.css">
+
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
   <input name="new" type="password" placeholder="New password" required />
