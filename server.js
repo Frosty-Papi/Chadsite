@@ -15,17 +15,27 @@ app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
 app.use(helmet({
-  contentSecurityPolicy: false
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://cdnjs.cloudflare.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'self'"]
+    }
+  }
 }));
 
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100
-});
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
 
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
 
@@ -41,13 +51,10 @@ app.use(session({
 }));
 
 const csrfProtection = csrf({ cookie: false });
-app.use((req, res, next) => {
-  if (req.path === "/profile/update") return next();
-  return csrfProtection(req, res, next);
-});
+app.use(csrfProtection);
 
 app.use((req, res, next) => {
-  res.locals.csrfToken = req.csrfToken ? req.csrfToken() : null;
+  res.locals.csrfToken = req.csrfToken();
   next();
 });
 
