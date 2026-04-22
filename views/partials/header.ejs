@@ -27,8 +27,7 @@
 
           <div class="profile-menu">
 
-            <!-- Trigger -->
-            <button type="button" class="profile-trigger" onclick="toggleDropdown()">
+            <button type="button" class="profile-trigger">
               <% if (user.avatar) { %>
                 <img src="<%= user.avatar %>" class="avatar-img" />
               <% } else { %>
@@ -42,24 +41,17 @@
               </span>
             </button>
 
-            <!-- Dropdown -->
             <div id="profile-dropdown" class="dropdown">
 
-              <a href="/profile" class="dropdown-item">
-                Profile
-              </a>
+              <a href="/profile" class="dropdown-item">Profile</a>
 
               <% if (user.role === "admin" || user.role === "super_admin") { %>
-                <a href="/admin" class="dropdown-item">
-                  Admin
-                </a>
+                <a href="/admin" class="dropdown-item">Admin</a>
               <% } %>
 
               <form method="POST" action="/logout">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                <button type="submit" class="dropdown-item logout">
-                  Logout
-                </button>
+                <button type="submit" class="dropdown-item logout">Logout</button>
               </form>
 
             </div>
@@ -76,78 +68,13 @@
 </header>
 
 <style>
-/* Profile Menu Container */
-.profile-menu {
-  position: relative;
-}
-
-/* Trigger Button */
-.profile-trigger {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-/* Avatar */
-.avatar-img {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-/* Username */
-.profile-name {
-  color: white;
-  font-size: 0.9rem;
-}
-
-/* Dropdown */
-.dropdown {
-  display: none;
-  position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
-  min-width: 180px;
-  background: #020617;
-  border: 1px solid #1e293b;
-  border-radius: 10px;
-  padding: 0.5rem;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.35);
-  z-index: 1100;
-}
-
-/* Dropdown Items */
-.dropdown-item {
-  display: block;
-  width: 100%;
-  padding: 0.6rem 0.8rem;
-  text-decoration: none;
-  color: #e2e8f0;
-  background: none;
-  border: none;
-  text-align: left;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-
-/* Hover */
-.dropdown-item:hover {
-  background: #0f172a;
-  color: #38bdf8;
-}
-
-/* Logout */
-.dropdown-item.logout {
-  color: #f87171;
-}
-
-.dropdown-item.logout:hover {
-  background: #0f172a;
-  color: #ef4444;
-}
+.profile-menu { position: relative; }
+.profile-trigger { display: flex; align-items: center; gap: 0.5rem; background: none; border: none; cursor: pointer; }
+.avatar-img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.profile-name { color: white; font-size: 0.9rem; }
+.dropdown { display: none; position: absolute; right: 0; top: calc(100% + 8px); min-width: 180px; background: #020617; border: 1px solid #1e293b; border-radius: 10px; padding: 0.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.35); z-index: 1100; }
+.dropdown-item { display: block; width: 100%; padding: 0.6rem 0.8rem; text-decoration: none; color: #e2e8f0; background: none; border: none; text-align: left; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+.dropdown-item:hover { background: #0f172a; color: #38bdf8; }
+.dropdown-item.logout { color: #f87171; }
+.dropdown-item.logout:hover { background: #0f172a; color: #ef4444; }
 </style>
