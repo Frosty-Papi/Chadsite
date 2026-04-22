@@ -1,9 +1,9 @@
 <h2>Admin Dashboard</h2>
 
 <div class="tabs">
-  <button type="button" onclick="showTab('users')">Users</button>
+  <button type="button" data-tab="users">Users</button>
   <% if (isSuperAdmin) { %>
-    <button type="button" onclick="showTab('services')">Services</button>
+    <button type="button" data-tab="services">Services</button>
   <% } %>
 </div>
 
@@ -25,7 +25,7 @@
           <td><%= u.username %></td>
           <td>
             <% if (isSuperAdmin) { %>
-              <select onchange="setRole(<%= u.id %>, this.value)">
+              <select class="role-select" data-id="<%= u.id %>">
                 <option value="user" <%= u.role === "user" ? "selected" : "" %>>User</option>
                 <option value="admin" <%= u.role === "admin" ? "selected" : "" %>>Admin</option>
               </select>
@@ -43,12 +43,12 @@
             <% } %>
           </td>
           <td>
-            <button type="button" onclick="disableUser(<%= u.id %>)">Disable</button>
-            <button type="button" onclick="enableUser(<%= u.id %>)">Enable</button>
-            <button type="button" onclick="resetPassword(<%= u.id %>)">Reset PW</button>
-            <button type="button" onclick="forceReset(<%= u.id %>)">Force Reset</button>
+            <button type="button" class="disable-btn" data-id="<%= u.id %>">Disable</button>
+            <button type="button" class="enable-btn" data-id="<%= u.id %>">Enable</button>
+            <button type="button" class="reset-btn" data-id="<%= u.id %>">Reset PW</button>
+            <button type="button" class="force-reset-btn" data-id="<%= u.id %>">Force Reset</button>
             <% if (isSuperAdmin) { %>
-              <button type="button" onclick="deleteUser(<%= u.id %>)">Delete</button>
+              <button type="button" class="delete-btn" data-id="<%= u.id %>">Delete</button>
             <% } %>
           </td>
         </tr>
@@ -74,7 +74,7 @@
     <% services.forEach(s => { %>
       <div>
         <%= s.name %> (<%= s.min_role %>)
-        <button type="button" onclick="deleteService(<%= s.id %>)">Delete</button>
+        <button type="button" class="delete-service-btn" data-id="<%= s.id %>">Delete</button>
       </div>
     <% }) %>
 
@@ -92,12 +92,9 @@
 <% } %>
 
 <style>
-  .tab.hidden { display: none; }
-  table { width: 100%; }
-  th, td { padding: 6px; }
+.tab.hidden { display: none; }
+table { width: 100%; }
+th, td { padding: 6px; }
 </style>
 
 <script src="/js/admin.js"></script>
-<script>
-  window.csrfToken = "<%= csrfToken %>";
-</script>
