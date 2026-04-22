@@ -6,9 +6,16 @@ export const state = {
   abilities: [],
   modifiers: [],
   gear: [],
+
+  abilityCategory: null,
   abilitiesChosen: [],
-  modifiersChosen: [],
-  gearChosen: [],
+
+  cardsInHand: [],
+  cardsDiscarded: [],
+  cardsDestroyed: [],
+  cardsOnBoard: [],
+
+  twoAbilitiesSelected: [],
 };
 
 export function setState(updates) {
