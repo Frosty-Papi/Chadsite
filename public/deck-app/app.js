@@ -642,7 +642,43 @@ function setExpansion(expansion) {
  -------------------------- */
 
 function displayAbilities(param) {
+  const switchingToDifferentClass =
+  state.abilityCategory &&
+  state.abilityCategory.name !== param.name;
+
+  if (switchingToDifferentClass) {
+    const hasExistingDeck =
+    state.abilitiesChosen.length > 0 ||
+    state.cardsInHand.length > 0 ||
+    state.cardsDiscarded.length > 0 ||
+    state.cardsDestroyed.length > 0 ||
+    state.cardsOnBoard.length > 0;
+
+    if (hasExistingDeck) {
+      const confirmed = window.confirm(
+        'Switching classes will clear your current deck and related play state. Continue?'
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    state.abilitiesChosen = [];
+    state.cardsInHand = [];
+    state.cardsDiscarded = [];
+    state.cardsDestroyed = [];
+    state.cardsOnBoard = [];
+    state.twoAbilitiesSelected = [];
+    state.boardCardMeta = {};
+    state.cardToEnhance = null;
+    state.enhancementEditingCard = null;
+    state.acceptedCard = null;
+    state.turn = 1;
+  }
+
   state.classChosen = true;
+
   if (state.abilityCategory === param) {
     state.abilityCategory = null;
     state.classChosen = false;
@@ -653,6 +689,8 @@ function displayAbilities(param) {
     state.className = getClassCode(param);
     buildPerkDefinitions();
   }
+
+  recomputeRestDisabled();
   render();
 }
 
@@ -726,6 +764,18 @@ function initShortRest() {
   state.cardToLose = state.cardsDiscarded[cardIndexToDestroy];
   initRest();
   openModal('shortRest');
+}
+
+function initLongRest() {
+  if (state.cardsDiscarded.length < 2) {
+    alert('You need at least 2 discarded cards to long rest.');
+    return;
+  }
+
+  state.cardToLose = null;
+  state.longRestSelection = null;
+
+  openModal('longRest');
 }
 
 function initRest() {
@@ -2104,7 +2154,13 @@ function bindEvents() {
       })
       );
 
-      document.getElementById('confirmLongRest')?.addEventListener('click', longRest);
+      document.getElementById('confirmLongRest')?.addEventListener('click', () => {
+        if (!state.cardToLose) {
+          alert('Select a card to lose.');
+          return;
+        }
+        longRest();
+      });
       document.getElementById('closeModal')?.addEventListener('click', closeModal);
 }
 

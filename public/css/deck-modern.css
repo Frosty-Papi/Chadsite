@@ -480,8 +480,8 @@ p {
   }
 }
 
-/* Disable hover scaling ONLY for Available Ability Cards */
-.ability-pool .image-card:hover {
-  transform: none !important;
-  scale: 1 !important;
+/* Disable hover magnification ONLY for Available Ability Cards */
+.ability-pool .image-card:hover .ability-image,
+.ability-pool .image-card .ability-image {
+  width: 10em !important;
 }
