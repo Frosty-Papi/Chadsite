@@ -1,6 +1,10 @@
 <link rel="stylesheet" href="/css/play.css">
 
-<section class="play-shell">
+<section class="play-shell" id="play-setup-root"
+  data-game-id="<%= game.id %>"
+  data-default-layout="<%- JSON.stringify(defaultConfig ? JSON.parse(defaultConfig.layout_json) : { gridSize: 5, widgets: [] }).replace(/&/g, '&amp;').replace(/"/g, '&quot;') %>"
+  data-player-min="<%= game.min_players || 1 %>"
+  data-player-max="<%= game.max_players || 4 %>">
   <div class="play-header">
     <div>
       <h1>Setup: <%= game.title %></h1>
@@ -76,14 +80,4 @@
   </div>
 </section>
 
-<script>
-  window.PLAY_SETUP_BOOTSTRAP = {
-    gameId: <%- JSON.stringify(game.id) %>,
-    defaultLayout: <%- JSON.stringify(defaultConfig ? JSON.parse(defaultConfig.layout_json) : { gridSize: 5, widgets: [] }) %>,
-    playerBounds: {
-      min: <%- JSON.stringify(game.min_players || 1) %>,
-      max: <%- JSON.stringify(game.max_players || 4) %>
-    }
-  };
-</script>
 <script src="/js/play-setup.js"></script>
