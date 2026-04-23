@@ -4,38 +4,127 @@
 
 <h2>My Profile</h2>
 
-<div class="profile-card">
-  <div class="avatar">
-    <% if (user.avatar) { %>
-      <img src="<%= user.avatar %>" />
-    <% } else { %>
-      <div class="fallback"><%= (user.display_name || user.username).charAt(0).toUpperCase() %></div>
-    <% } %>
-  </div>
+<div class="profile-grid">
+    <div class="profile-card">
+      <div class="profile-identity">
+        <div class="avatar">
+          <% if (user.avatar) { %>
+            <img src="<%= user.avatar %>" />
+          <% } else { %>
+            <div class="fallback"><%= (user.display_name || user.username).charAt(0).toUpperCase() %></div>
+          <% } %>
+        </div>
 
-  <form method="POST" action="/profile/update" enctype="multipart/form-data">
-    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-    <label>Display Name</label>
-    <input name="display_name" value="<%= user.display_name || '' %>" />
+        <div class="identity-text">
+          <div class="identity-label">Username</div>
+          <div class="identity-username">@<%= user.username %></div>
+        </div>
+      </div>
 
-    <label>Profile Picture</label>
-    <input type="file" id="avatarInput" name="avatar" accept="image/*">
-    <img id="preview" class="preview-hidden" />
-    <button type="button" id="crop-save-btn">Crop & Save</button>
+      <form method="POST" action="/profile/update" class="stack-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-    <button type="submit">Save</button>
-  </form>
+        <label>Display Name</label>
+        <input name="display_name" value="<%= user.display_name || '' %>" />
+
+        <button type="submit">Save</button>
+      </form>
+
+      <form method="POST" action="/profile/update" enctype="multipart/form-data" class="stack-form avatar-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <label>Profile Picture</label>
+        <input type="file" id="avatarInput" name="avatar" accept="image/*">
+        <img id="preview" class="preview-hidden" />
+
+        <button type="button" id="crop-save-btn">Crop & Save</button>
+      </form>
+    </div>
+
+  <section class="profile-panel friends-panel">
+    <h3>Friends</h3>
+
+    <form id="friend-request-form" class="stack-form compact-form">
+      <label>Add Friend by Username</label>
+      <div class="inline-form">
+        <input type="text" name="username" maxlength="64" placeholder="Username" required>
+        <button type="submit">Send Request</button>
+      </div>
+    </form>
+
+    <div class="friends-tabs">
+      <button type="button" class="friends-tab-btn active" data-friends-tab="list">Friend List</button>
+      <button type="button" class="friends-tab-btn" data-friends-tab="incoming">Incoming Requests</button>
+      <button type="button" class="friends-tab-btn" data-friends-tab="outgoing">Outgoing Requests</button>
+    </div>
+
+    <div id="friends-tab-list" class="friends-tab-panel active">
+      <div class="friends-box">
+        <ul class="friends-list">
+          <% if (!friends.length) { %>
+            <li class="muted">No friends yet.</li>
+          <% } %>
+          <% friends.forEach(friend => { %>
+            <li>
+              <strong><%= friend.display_name || friend.username %></strong>
+              <span>@<%= friend.username %></span>
+            </li>
+          <% }) %>
+        </ul>
+      </div>
+    </div>
+
+    <div id="friends-tab-incoming" class="friends-tab-panel">
+      <div class="friends-box">
+        <ul class="friends-list" id="incoming-request-list">
+          <% if (!incomingRequests.length) { %>
+            <li class="muted">No incoming requests.</li>
+          <% } %>
+          <% incomingRequests.forEach(item => { %>
+            <li class="request-item" data-request-id="<%= item.id %>">
+              <div class="request-meta">
+                <strong><%= item.display_name || item.username %></strong>
+                <span>@<%= item.username %></span>
+              </div>
+              <div class="request-actions">
+                <button type="button" class="accept-request-btn">Accept</button>
+                <button type="button" class="reject-request-btn secondary">Reject</button>
+              </div>
+            </li>
+          <% }) %>
+        </ul>
+      </div>
+    </div>
+
+    <div id="friends-tab-outgoing" class="friends-tab-panel">
+      <div class="friends-box">
+        <ul class="friends-list">
+          <% if (!outgoingRequests.length) { %>
+            <li class="muted">No outgoing requests.</li>
+          <% } %>
+          <% outgoingRequests.forEach(item => { %>
+            <li>
+              <strong><%= item.display_name || item.username %></strong>
+              <span>@<%= item.username %></span>
+            </li>
+          <% }) %>
+        </ul>
+      </div>
+    </div>
+  </section>
 </div>
 
-<h3>Change Password</h3>
+<section class="profile-panel profile-panel-wide">
+  <h3>Change Password</h3>
 
-<form method="POST" action="/profile/password" id="password-form">
-  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-  <input name="current" type="password" placeholder="Current password" required />
-  <input name="new" type="password" placeholder="New password" required />
-  <input name="confirm" type="password" placeholder="Confirm password" required />
-  <button type="submit">Update Password</button>
-</form>
+  <form method="POST" action="/profile/password" id="password-form" class="stack-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input name="current" type="password" placeholder="Current password" required />
+    <input name="new" type="password" placeholder="New password" required />
+    <input name="confirm" type="password" placeholder="Confirm password" required />
+    <button type="submit">Update Password</button>
+  </form>
+</section>
 
 <div class="logout-row">
   <form method="POST" action="/logout">

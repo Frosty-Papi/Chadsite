@@ -21,15 +21,15 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "https://cdnjs.cloudflare.com"],
-      styleSrc: ["'self'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-      imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      baseUri: ["'self'"],
-      formAction: ["'self'"],
-      frameAncestors: ["'self'"]
+        scriptSrc: ["'self'", "https://cdnjs.cloudflare.com"],
+        styleSrc: ["'self'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        connectSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+          frameAncestors: ["'self'"]
     }
   }
 }));
@@ -78,19 +78,20 @@ app.use("/login", loginLimiter);
 app.use("/", require("./routes/auth"));
 app.use("/", require("./routes/profile"));
 app.use("/", require("./routes/admin"));
+app.use("/", require("./routes/play"));
 app.use("/", require("./routes/services"));
 
 app.get("/api/deck/battle-goals", (req, res) => {
   try {
     const dir = path.join(__dirname, "views", "deck", "data", "battle-goals");
     const files = fs.readdirSync(dir)
-      .filter(name => /\.(png|jpg|jpeg|webp)$/i.test(name))
-      .filter(name => name !== "battlegoal-back.png")
-      .sort((a, b) => a.localeCompare(b))
-      .map(name => ({
-        name: name.replace(/\.[^.]+$/, ""),
-        image: `battle-goals/${name}`
-      }));
+    .filter(name => /\.(png|jpg|jpeg|webp)$/i.test(name))
+    .filter(name => name !== "battlegoal-back.png")
+    .sort((a, b) => a.localeCompare(b))
+    .map(name => ({
+      name: name.replace(/\.[^.]+$/, ""),
+                  image: `battle-goals/${name}`
+    }));
     res.json({ battleGoals: files });
   } catch (err) {
     console.error("Failed to list battle goals", err);

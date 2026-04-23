@@ -1,12 +1,35 @@
 document.addEventListener("DOMContentLoaded", () => {
     let cropper = null;
 
-    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || "";
+    function getCSRF() {
+        return document.querySelector('meta[name="csrf-token"]')?.content || "";
+    }
+
+    async function api(url, body) {
+        const res = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "CSRF-Token": getCSRF()
+            },
+            body: JSON.stringify(body)
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            throw new Error(data.error || "Request failed");
+        }
+
+        return data;
+    }
 
     const input = document.getElementById("avatarInput");
     const preview = document.getElementById("preview");
     const cropSaveBtn = document.getElementById("crop-save-btn");
     const passwordForm = document.getElementById("password-form");
+    const friendForm = document.getElementById("friend-request-form");
+    const incomingRequestList = document.getElementById("incoming-request-list");
 
     if (input && preview) {
         input.addEventListener("change", (e) => {
@@ -50,9 +73,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const formData = new FormData();
                 formData.append("avatar", blob, "avatar.png");
 
-                const displayNameInput = document.querySelector("input[name='display_name']");
-                formData.append("display_name", displayNameInput ? displayNameInput.value : "");
-
                 const csrf = document.querySelector('input[name="_csrf"]').value;
                 formData.append("_csrf", csrf);
 
@@ -85,4 +105,53 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
+    if (friendForm) {
+        friendForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const data = Object.fromEntries(new FormData(friendForm));
+
+            try {
+                await api("/api/profile/friends/request", data);
+                location.reload();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+    }
+
+    if (incomingRequestList) {
+        incomingRequestList.addEventListener("click", async (e) => {
+            const item = e.target.closest(".request-item");
+            if (!item) return;
+
+            const requestId = Number(item.dataset.requestId);
+            if (!Number.isInteger(requestId)) return;
+
+            try {
+                if (e.target.closest(".accept-request-btn")) {
+                    await api("/api/profile/friends/respond", { requestId, action: "accept" });
+                    location.reload();
+                }
+
+                if (e.target.closest(".reject-request-btn")) {
+                    await api("/api/profile/friends/respond", { requestId, action: "reject" });
+                    location.reload();
+                }
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+    }
+
+    document.querySelectorAll(".friends-tab-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".friends-tab-btn").forEach((el) => el.classList.remove("active"));
+            document.querySelectorAll(".friends-tab-panel").forEach((el) => el.classList.remove("active"));
+
+            btn.classList.add("active");
+            document.getElementById(`friends-tab-${btn.dataset.friendsTab}`)?.classList.add("active");
+        });
+    });
 });

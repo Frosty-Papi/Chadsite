@@ -1,24 +1,54 @@
 export const state = {
   menu: 'home',
-  turn: 1,
-  level: 1,
   dark: true,
-  abilities: [],
-  modifiers: [],
-  gear: [],
+  modal: null,
 
+  expansion: 'vanilla',
+  availableExpansions: ['vanilla', 'frosthaven', 'jotl', 'crimsonscales', 'trailofashes'],
+
+  hasEnabledCardExchange: false,
+  hasEnabledModifierDisplay: false,
+  hasEnabledCurses: true,
+  hasEnabledSaveGameplayData: true,
+
+  abilities: [],
   abilityCategory: null,
+
+  modifiers: [],
+  modifiersBase: [],
+  modifiersSpecial: [],
+
+  allGear: [],
+  battleGoals: [],
+  classIcons: {},
+
+  classNames: {},
+  modifierCategory: null,
+
+  perks: [],
+  perkDefinitions: [],
+
+  enhancementCatalog: [],
+  enhancementSelections: {},
+  enhancementEditingCard: null,
+
+  level: 1,
+  className: null,
   abilitiesChosen: [],
 
+  turn: 1,
   cardsInHand: [],
   cardsDiscarded: [],
   cardsDestroyed: [],
   cardsOnBoard: [],
-
   twoAbilitiesSelected: [],
+  isRestDisabled: true,
 
-  modifiersBase: [],
-  modifiersSpecial: [],
+  pendingShortRestLoss: null,
+  longRestSelection: null,
+
+  boardCardMeta: {},
+
   modifiersChosen: [],
   modifiersDrawPile: [],
   modifiersDiscardPile: [],
@@ -26,14 +56,18 @@ export const state = {
   blessings: 0,
   curses: 0,
 
-  allGear: [],
   gearChosen: [],
   gearCategoryIndex: null,
 
-  battleGoals: [],
   battleGoalsDrawn: [],
   battleGoalPicked: [],
   goalCounter: 0,
+
+  acceptedCard: null,
+  cardExchangePool: [],
+
+  specialClassMode: null,
+  specialClassValue: 0,
 };
 
 export function setState(updates) {

@@ -15,13 +15,62 @@ const router = express.Router();
 
 const upload = multer({
   storage: multer.memoryStorage(),
-                      limits: { fileSize: 5 * 1024 * 1024 } // 5MB upload limit
+                      limits: { fileSize: 5 * 1024 * 1024 }
 });
 
-const MAX_AVATAR_BYTES = 1 * 1024 * 1024; // 1MB final limit
+const MAX_AVATAR_BYTES = 1 * 1024 * 1024;
+
+function normalizeUsername(value) {
+  return String(value || "").trim().toLowerCase();
+}
 
 router.get("/profile", requireLogin, (req, res) => {
-  res.render("profile");
+  const user = getUser(req);
+
+  const incomingRequests = db.prepare(`
+  SELECT
+  fr.id,
+  fr.sender_id,
+  fr.created_at,
+  u.username,
+  u.display_name
+  FROM friend_requests fr
+  JOIN users u ON u.id = fr.sender_id
+  WHERE fr.receiver_id = ?
+  AND fr.status = 'pending'
+  ORDER BY fr.created_at DESC
+  `).all(user.id);
+
+  const outgoingRequests = db.prepare(`
+  SELECT
+  fr.id,
+  fr.receiver_id,
+  fr.created_at,
+  u.username,
+  u.display_name
+  FROM friend_requests fr
+  JOIN users u ON u.id = fr.receiver_id
+  WHERE fr.sender_id = ?
+  AND fr.status = 'pending'
+  ORDER BY fr.created_at DESC
+  `).all(user.id);
+
+  const friends = db.prepare(`
+  SELECT
+  u.id,
+  u.username,
+  u.display_name
+  FROM friends f
+  JOIN users u ON u.id = f.friend_id
+  WHERE f.user_id = ?
+  ORDER BY COALESCE(u.display_name, u.username) COLLATE NOCASE ASC
+  `).all(user.id);
+
+  res.render("profile", {
+    incomingRequests,
+    outgoingRequests,
+    friends
+  });
 });
 
 router.post("/profile/update", requireLogin, upload.single("avatar"), async (req, res) => {
@@ -67,6 +116,146 @@ router.post("/profile/update", requireLogin, upload.single("avatar"), async (req
   }
 
   res.redirect("/profile");
+});
+
+router.post("/profile/password", requireLogin, (req, res) => {
+  const user = getUser(req);
+  const { current, new: newPass, confirm } = req.body;
+
+  if (!current || !newPass || !confirm) {
+    return res.status(400).send("Missing fields");
+  }
+
+  if (newPass !== confirm) {
+    return res.status(400).send("Passwords do not match");
+  }
+
+  const fullUser = db.prepare("SELECT * FROM users WHERE id = ?").get(user.id);
+  if (!fullUser || !bcrypt.compareSync(current, fullUser.password_hash)) {
+    return res.status(400).send("Current password is incorrect");
+  }
+
+  const err = validatePassword(newPass, fullUser.username);
+  if (err) return res.status(400).send(err);
+
+  const hash = bcrypt.hashSync(newPass, 10);
+
+  db.prepare(`
+  UPDATE users
+  SET password_hash = ?, must_reset_password = 0, password_reset_token = 0
+  WHERE id = ?
+  `).run(hash, user.id);
+
+  res.redirect("/profile");
+});
+
+router.post("/api/profile/friends/request", requireLogin, (req, res) => {
+  const user = getUser(req);
+  const username = normalizeUsername(req.body.username);
+
+  if (!username) {
+    return res.status(400).json({ error: "Username is required" });
+  }
+
+  const target = db.prepare(`
+  SELECT id, username, display_name
+  FROM users
+  WHERE lower(username) = ?
+  `).get(username);
+
+  if (!target) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  if (target.id === user.id) {
+    return res.status(400).json({ error: "You cannot add yourself" });
+  }
+
+  const existingFriend = db.prepare(`
+  SELECT id
+  FROM friends
+  WHERE user_id = ? AND friend_id = ?
+  `).get(user.id, target.id);
+
+  if (existingFriend) {
+    return res.status(409).json({ error: "You are already friends" });
+  }
+
+  const existingRequest = db.prepare(`
+  SELECT id, sender_id, receiver_id, status
+  FROM friend_requests
+  WHERE (sender_id = ? AND receiver_id = ?)
+  OR (sender_id = ? AND receiver_id = ?)
+  `).get(user.id, target.id, target.id, user.id);
+
+  if (existingRequest && existingRequest.status === "pending") {
+    return res.status(409).json({ error: "A pending friend request already exists" });
+  }
+
+  if (existingRequest && existingRequest.status !== "pending") {
+    db.prepare(`DELETE FROM friend_requests WHERE id = ?`).run(existingRequest.id);
+  }
+
+  db.prepare(`
+  INSERT INTO friend_requests (sender_id, receiver_id, status)
+  VALUES (?, ?, 'pending')
+  `).run(user.id, target.id);
+
+  res.json({ success: true });
+});
+
+router.post("/api/profile/friends/respond", requireLogin, (req, res) => {
+  const user = getUser(req);
+  const requestId = Number.parseInt(req.body.requestId, 10);
+  const action = String(req.body.action || "").trim().toLowerCase();
+
+  if (!Number.isInteger(requestId) || !["accept", "reject"].includes(action)) {
+    return res.status(400).json({ error: "Invalid request" });
+  }
+
+  const request = db.prepare(`
+  SELECT id, sender_id, receiver_id, status
+  FROM friend_requests
+  WHERE id = ? AND receiver_id = ?
+  `).get(requestId, user.id);
+
+  if (!request || request.status !== "pending") {
+    return res.status(404).json({ error: "Friend request not found" });
+  }
+
+  if (action === "reject") {
+    db.prepare(`
+    UPDATE friend_requests
+    SET status = 'rejected',
+    updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+    `).run(requestId);
+
+    return res.json({ success: true });
+  }
+
+  const tx = db.transaction(() => {
+    db.prepare(`
+    UPDATE friend_requests
+    SET status = 'accepted',
+    updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+    `).run(requestId);
+
+    db.prepare(`
+    INSERT OR IGNORE INTO friends (user_id, friend_id)
+    VALUES (?, ?)
+    `).run(user.id, request.sender_id);
+
+    db.prepare(`
+    INSERT OR IGNORE INTO friends (user_id, friend_id)
+    VALUES (?, ?)
+    `).run(request.sender_id, user.id);
+  });
+
+  tx();
+
+  res.json({ success: true });
 });
 
 module.exports = router;

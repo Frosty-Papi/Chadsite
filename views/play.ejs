@@ -1,0 +1,73 @@
+<link rel="stylesheet" href="/css/play.css">
+
+<section class="play-shell">
+  <div class="play-hero">
+    <h2>Play</h2>
+    <p>Host a game, browse public sessions, or join private games from your friends list.</p>
+  </div>
+
+  <section class="play-panel">
+    <div class="panel-heading">
+      <h3>Host a Game</h3>
+    </div>
+
+    <form id="create-session-form" class="play-form">
+      <input type="text" name="title" maxlength="100" placeholder="Game title" required>
+      <input type="number" name="maxUsers" min="1" max="64" value="4" required>
+
+      <label class="checkbox-row">
+        <input type="checkbox" name="isPrivate" value="1">
+        <span>Private game</span>
+      </label>
+
+      <button type="submit">Create Session</button>
+    </form>
+  </section>
+
+  <section class="play-panel">
+    <div class="panel-heading">
+      <h3>Available Game Sessions</h3>
+    </div>
+
+    <div class="play-tabs">
+      <button type="button" class="tab-btn active" data-tab="public">Public Games</button>
+      <button type="button" class="tab-btn" data-tab="private">Private Games</button>
+    </div>
+
+    <div id="tab-public" class="play-tab active">
+      <div class="table-wrap">
+        <table class="play-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Host</th>
+              <th>Players</th>
+            </tr>
+          </thead>
+          <tbody id="public-games-body">
+            <tr><td colspan="3" class="muted">Loading public games...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="tab-private" class="play-tab">
+      <div class="table-wrap">
+        <table class="play-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Host</th>
+              <th>Players</th>
+            </tr>
+          </thead>
+          <tbody id="private-games-body">
+            <tr><td colspan="3" class="muted">Loading private games...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</section>
+
+<script src="/js/play.js"></script>
