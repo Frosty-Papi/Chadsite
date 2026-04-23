@@ -2,16 +2,8 @@ const builder = document.getElementById('layout-builder');
 const grid = 5;
 let widgets = [];
 
+function getCSRFToken(){return document.querySelector('meta[name="csrf-token"]')?.content||"";}
 function snap(v){return Math.round(v/grid)*grid;}
-
-builder?.addEventListener('click', (e)=>{
-  if(e.target.classList.contains('widget-btn')){
-    const type = e.target.dataset.widgetType;
-    const w = {id:Date.now(),type,x:0,y:0,width:100,height:50};
-    widgets.push(w);
-    render();
-  }
-});
 
 function render(){
   builder.innerHTML='';
@@ -33,6 +25,16 @@ function render(){
   });
 }
 
+// FIXED BUTTON HANDLER
+document.querySelectorAll('.widget-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const type=btn.dataset.widgetType;
+    const w={id:Date.now(),type,x:0,y:0,width:100,height:50};
+    widgets.push(w);
+    render();
+  });
+});
+
 render();
 
 document.getElementById('save-config-btn')?.addEventListener('click', async ()=>{
@@ -45,7 +47,7 @@ document.getElementById('save-config-btn')?.addEventListener('click', async ()=>
     makeDefault:document.getElementById('config-default').checked
   };
 
-  await fetch('/api/play/configurations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  await fetch('/api/play/configurations',{method:'POST',headers:{'Content-Type':'application/json','CSRF-Token':getCSRFToken()},body:JSON.stringify(body)});
   alert('Saved');
 });
 
@@ -61,7 +63,7 @@ document.getElementById('play-setup-form')?.addEventListener('submit', async (e)
     maxPlayers:form.maxPlayers.value
   };
 
-  const res=await fetch('/api/play/sessions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const res=await fetch('/api/play/sessions',{method:'POST',headers:{'Content-Type':'application/json','CSRF-Token':getCSRFToken()},body:JSON.stringify(body)});
   const data=await res.json();
   if(data.redirectUrl) location.href=data.redirectUrl;
 });
