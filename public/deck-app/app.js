@@ -56,6 +56,10 @@ function findGearByName(name) {
   return flatGear().find(i => i.name === name) || null;
 }
 
+function findBattleGoalByName(name) {
+  return state.battleGoals.find(g => g.name === name) || null;
+}
+
 function isCurse(card) {
   const curseSet = state.modifiersSpecial.find(s => s.name === CURSE_NAME);
   return !!(card && curseSet && curseSet.cards.includes(card));
@@ -100,6 +104,9 @@ function buildPayload() {
       lost: !!i.lost,
       used: i.used || 0,
     })),
+    battleGoalsDrawn: state.battleGoalsDrawn.map(g => g.name),
+    battleGoalPicked: state.battleGoalPicked.map(g => g.name),
+    goalCounter: state.goalCounter,
   };
 }
 
@@ -138,6 +145,10 @@ function applyPayload(data) {
     item.used = entry.used || 0;
     return item;
   }).filter(Boolean);
+
+  state.battleGoalsDrawn = (data.battleGoalsDrawn || []).map(findBattleGoalByName).filter(Boolean);
+  state.battleGoalPicked = (data.battleGoalPicked || []).map(findBattleGoalByName).filter(Boolean);
+  state.goalCounter = data.goalCounter || 0;
 
   updateBlessCurseCounts();
 }
@@ -217,6 +228,43 @@ function addSpecialModifier(kind) {
   state.modifiersDrawPile.push(card);
   shuffle(state.modifiersDrawPile);
   updateBlessCurseCounts();
+  saveState();
+  render();
+}
+
+function drawBattleGoals() {
+  if (!state.battleGoals.length) return;
+  state.battleGoalsDrawn = [];
+  state.battleGoalPicked = [];
+  const i = Math.floor(Math.random() * state.battleGoals.length);
+  let j = Math.floor(Math.random() * state.battleGoals.length);
+  while (i === j && state.battleGoals.length > 1) {
+    j = Math.floor(Math.random() * state.battleGoals.length);
+  }
+  state.battleGoalsDrawn.push(state.battleGoals[i]);
+  if (state.battleGoals.length > 1) state.battleGoalsDrawn.push(state.battleGoals[j]);
+  saveState();
+  render();
+}
+
+function pickBattleGoal(goal) {
+  state.battleGoalsDrawn = [];
+  state.battleGoalPicked = [goal];
+  state.goalCounter = 0;
+  saveState();
+  render();
+}
+
+function incrementGoalCounter() {
+  state.goalCounter += 1;
+  saveState();
+  render();
+}
+
+function resetBattleGoals() {
+  state.battleGoalsDrawn = [];
+  state.battleGoalPicked = [];
+  state.goalCounter = 0;
   saveState();
   render();
 }
@@ -350,8 +398,14 @@ function newGame() {
   state.turn = 1;
   state.gearChosen.forEach(resetGearItem);
   initModifiers();
+  resetBattleGoals();
   saveState();
   render();
+}
+
+function renderEnhancementOverlay(items, above = false) {
+  if (!items || !items.length) return '';
+  return `<span class="enhancement ${above ? 'above' : ''}"><div class="enhancement-stack">${items.map(item => `<img src="${deckData(item.image)}" class="enhancement-badge" alt="enhancement">`).join('')}</div></span>`;
 }
 
 function renderClassButtons() {
@@ -362,7 +416,7 @@ function renderAbilityPool() {
   if (!state.abilityCategory) return '<p class="muted empty-help">Choose a class to build a deck.</p>';
   return `<div class="image-grid compact">${(state.abilityCategory.cards || [])
     .filter(card => card.level <= state.level)
-    .map(card => `<button class="image-card ${state.abilitiesChosen.includes(card) ? 'chosen' : ''}" data-add="${card.name}"><img src="${cardImg(card)}" alt="${card.name}" class="ability-image"></button>`)
+    .map(card => `<button class="image-card ${state.abilitiesChosen.includes(card) ? 'chosen' : ''}" data-add="${card.name}"><img src="${cardImg(card)}" alt="${card.name}" class="ability-image">${renderEnhancementOverlay(card.top, true)}${renderEnhancementOverlay(card.bottom, false)}</button>`)
     .join('')}</div>`;
 }
 
@@ -370,15 +424,17 @@ function renderPlayZoneCards(title, cards, pickType = '') {
   if (!cards.length) return '<p class="muted empty-help">Empty</p>';
   return cards.map(card => `
     <div class="play-card ${state.twoAbilitiesSelected.includes(card) ? 'selected' : ''}" ${pickType ? `data-${pickType}="${card.name}"` : ''}>
-      <img src="${cardImg(card)}" alt="${card.name}" class="ability-image">
-      <div class="card-actions ${title === 'Discard' ? 'discard-actions' : ''}">
+      <img src="${cardImg(card)}" alt="${card.name}" class="ability-image ${title === 'Discarded' ? 'played' : ''} ${title === 'Lost' ? 'destroyed' : ''}">
+      ${renderEnhancementOverlay(card.top, true)}
+      ${renderEnhancementOverlay(card.bottom, false)}
+      <div class="card-actions ${title === 'Discarded' ? 'discard-actions' : ''}">
         ${title === 'Hand' ? `<img src="${iconImg('lost.png')}" class="small-icon" data-hand-destroy="${card.name}" alt="Lose">` : ''}
-        ${title === 'Discard' ? `
+        ${title === 'Discarded' ? `
           <img src="${iconImg('recover.png')}" class="small-icon" data-recover="${card.name}" alt="Recover">
           <img src="${iconImg('lost.png')}" class="small-icon" data-destroy="${card.name}" alt="Lose">
           <img src="${iconImg('keep-on-board.png')}" class="small-icon" data-board="${card.name}" alt="Board">
           <img src="${iconImg('keep-on-board-one-turn.png')}" class="small-icon" data-round="${card.name}" alt="Round">` : ''}
-        ${title === 'Destroyed' ? `<img src="${iconImg('recover.png')}" class="small-icon" data-recover="${card.name}" alt="Recover">` : ''}
+        ${title === 'Lost' ? `<img src="${iconImg('recover.png')}" class="small-icon" data-recover="${card.name}" alt="Recover">` : ''}
       </div>
       ${typeof card.duration === 'number' && card.duration !== 0 ? `<div class="counter-badge">${card.duration}</div>` : ''}
     </div>`).join('');
@@ -398,6 +454,24 @@ function renderModifiers() {
     </div>
     <div class="modifier-discard-scroll">${state.modifiersDiscardPile.map(m => `<img src="${cardImg(m)}" class="modifier-thumb" alt="${m.name}">`).join('')}</div>
     <p class="muted">Blessings: ${state.blessings} | Curses: ${state.curses}</p>
+  </section>`;
+}
+
+function renderBattleGoals() {
+  if (!state.battleGoals.length) return '';
+  return `<section class="panel"><h2>Battle Goals</h2>
+    <div class="play-strip">
+      <div class="gear-card battle-goal-card" id="drawGoals">
+        <img src="${deckData('battle-goals/battlegoal-back.png')}" class="gear-image" alt="battle goal back">
+        <div class="gear-actions"><button class="icon-btn">Draw</button></div>
+      </div>
+      ${state.battleGoalsDrawn.map(goal => `<div class="gear-card battle-goal-card" data-pick-goal="${goal.name}"><img src="${deckData(goal.image)}" class="gear-image" alt="${goal.name}"><div class="gear-actions"><button class="icon-btn">Pick</button></div></div>`).join('')}
+      ${state.battleGoalPicked.map(goal => `<div class="gear-card battle-goal-card"><img src="${deckData(goal.image)}" class="gear-image" alt="${goal.name}"><div class="counter-badge">${state.goalCounter}</div></div>`).join('')}
+    </div>
+    <div class="row-actions wrap modifiers-actions">
+      <button id="incGoal" class="btn">+1</button>
+      <button id="resetGoals" class="btn">Reset</button>
+    </div>
   </section>`;
 }
 
@@ -460,14 +534,15 @@ function render() {
           <div class="play-strip">${renderPlayZoneCards('On Board', state.cardsOnBoard)}</div>
 
           <h3 class="play-section-title">Discarded</h3>
-          <div class="play-strip">${renderPlayZoneCards('Discard', state.cardsDiscarded)}</div>
+          <div class="play-strip">${renderPlayZoneCards('Discarded', state.cardsDiscarded)}</div>
 
           <h3 class="play-section-title">Lost</h3>
-          <div class="play-strip">${renderPlayZoneCards('Destroyed', state.cardsDestroyed)}</div>
+          <div class="play-strip">${renderPlayZoneCards('Lost', state.cardsDestroyed)}</div>
         </div>
 
         <div class="right-column">
           ${renderModifiers()}
+          ${renderBattleGoals()}
           ${renderGear()}
         </div>
       </div>
@@ -514,6 +589,13 @@ function bindEvents() {
   document.getElementById('shuffleMod')?.addEventListener('click', shuffleModifiers);
   document.getElementById('addBless')?.addEventListener('click', () => addSpecialModifier(BLESS_NAME));
   document.getElementById('addCurse')?.addEventListener('click', () => addSpecialModifier(CURSE_NAME));
+  document.getElementById('drawGoals')?.addEventListener('click', drawBattleGoals);
+  document.querySelectorAll('[data-pick-goal]').forEach(el => el.addEventListener('click', () => {
+    const goal = findBattleGoalByName(el.dataset.pickGoal);
+    if (goal) pickBattleGoal(goal);
+  }));
+  document.getElementById('incGoal')?.addEventListener('click', incrementGoalCounter);
+  document.getElementById('resetGoals')?.addEventListener('click', resetBattleGoals);
   document.querySelectorAll('[data-gear]').forEach(btn => btn.addEventListener('click', () => {
     const item = findGearByName(btn.dataset.gear);
     if (item) toggleGear(item);
@@ -548,9 +630,17 @@ function bindEvents() {
 
 function init() {
   loadData();
-  if (state.modifiersBase.length) initModifiers();
-  loadSavedState();
-  render();
+  fetch('/api/deck/battle-goals')
+    .then(r => r.json())
+    .then(data => {
+      if (data?.battleGoals) state.battleGoals = data.battleGoals;
+    })
+    .catch(() => {})
+    .finally(() => {
+      if (state.modifiersBase.length) initModifiers();
+      loadSavedState();
+      render();
+    });
 }
 
 document.addEventListener('DOMContentLoaded', init);
