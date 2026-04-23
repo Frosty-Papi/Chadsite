@@ -29,6 +29,11 @@ export const state = {
   allGear: [],
   gearChosen: [],
   gearCategoryIndex: null,
+
+  battleGoals: [],
+  battleGoalsDrawn: [],
+  battleGoalPicked: [],
+  goalCounter: 0,
 };
 
 export function setState(updates) {
