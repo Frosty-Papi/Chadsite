@@ -7,6 +7,7 @@ const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const csrf = require("csurf");
 const path = require("path");
+const fs = require("fs");
 
 const { enforceAccountState } = require("./middleware/auth");
 const { cleanupOrphanAvatars } = require("./jobs/cleanupAvatars");
@@ -78,6 +79,24 @@ app.use("/", require("./routes/auth"));
 app.use("/", require("./routes/profile"));
 app.use("/", require("./routes/admin"));
 app.use("/", require("./routes/services"));
+
+app.get("/api/deck/battle-goals", (req, res) => {
+  try {
+    const dir = path.join(__dirname, "views", "deck", "data", "battle-goals");
+    const files = fs.readdirSync(dir)
+      .filter(name => /\.(png|jpg|jpeg|webp)$/i.test(name))
+      .filter(name => name !== "battlegoal-back.png")
+      .sort((a, b) => a.localeCompare(b))
+      .map(name => ({
+        name: name.replace(/\.[^.]+$/, ""),
+        image: `battle-goals/${name}`
+      }));
+    res.json({ battleGoals: files });
+  } catch (err) {
+    console.error("Failed to list battle goals", err);
+    res.status(500).json({ battleGoals: [] });
+  }
+});
 
 app.get("/deck-modern", (req, res) => {
   res.render("deck-modern");
