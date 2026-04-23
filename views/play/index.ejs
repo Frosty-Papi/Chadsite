@@ -1,0 +1,114 @@
+<link rel="stylesheet" href="/css/play.css">
+
+<section class="play-shell">
+  <div class="play-header">
+    <div>
+      <h1>Play</h1>
+      <p>Host or join an active board game session.</p>
+    </div>
+  </div>
+
+  <div class="play-grid">
+    <aside class="play-panel host-panel">
+      <h2>Host a Game</h2>
+
+      <form id="host-game-form" autocomplete="off">
+        <label for="game-search">Game Title</label>
+        <input id="game-search" name="gameSearch" type="text" placeholder="Start typing a game title..." />
+        <div id="game-search-results" class="search-results"></div>
+
+        <div id="selected-game-summary" class="selected-game-summary" hidden></div>
+
+        <label for="host-visibility">Visibility</label>
+        <select id="host-visibility" name="visibility">
+          <option value="public">Public Games</option>
+          <option value="private">Private Games</option>
+        </select>
+
+        <button type="submit" class="play-btn">Continue</button>
+      </form>
+    </aside>
+
+    <section class="play-panel tables-panel">
+      <div class="tabs">
+        <button class="tab-btn active" data-target="public-games" type="button">Public Games</button>
+        <button class="tab-btn" data-target="private-games" type="button">Private Games</button>
+      </div>
+
+      <div id="public-games" class="tab-content active">
+        <table class="play-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Host</th>
+              <th>Players</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!publicSessions.length) { %>
+              <tr><td colspan="4">No public sessions are active.</td></tr>
+            <% } %>
+            <% publicSessions.forEach(session => { %>
+              <tr>
+                <td><%= session.title %></td>
+                <td><%= session.display_name || session.username %></td>
+                <td><%= session.current_players %>/<%= session.max_players %></td>
+                <td><a class="play-link" href="/play/session/<%= session.session_key %>">Join</a></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <div id="private-games" class="tab-content">
+        <table class="play-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Host</th>
+              <th>Players</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!privateSessions.length) { %>
+              <tr><td colspan="4">No private friend sessions are active.</td></tr>
+            <% } %>
+            <% privateSessions.forEach(session => { %>
+              <tr>
+                <td><%= session.title %></td>
+                <td><%= session.display_name || session.username %></td>
+                <td><%= session.current_players %>/<%= session.max_players %></td>
+                <td><a class="play-link" href="/play/session/<%= session.session_key %>">Join</a></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</section>
+
+<div id="new-game-modal" class="modal" hidden>
+  <div class="modal-card">
+    <h2>Create Game Entry</h2>
+    <form id="new-game-form">
+      <label for="bgg-url">BoardGameGeek URL</label>
+      <input id="bgg-url" name="bggUrl" type="url" placeholder="https://boardgamegeek.com/boardgame/295770/frosthaven" required>
+
+      <label for="min-players">Min Players</label>
+      <input id="min-players" name="minPlayers" type="number" min="1" value="1">
+
+      <label for="max-players">Max Players</label>
+      <input id="max-players" name="maxPlayers" type="number" min="1" value="4">
+
+      <div class="modal-actions">
+        <button type="button" class="play-btn secondary" data-close-modal>Cancel</button>
+        <button type="submit" class="play-btn">Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/play-index.js"></script>
