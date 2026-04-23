@@ -1,26 +1,84 @@
-/* Ability grid spacing */
-.ability-grid { gap: 5px; }
+.class-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 
-/* Remove hover zoom */
-.image-card:hover .ability-image,
+.class-card {
+  width: 160px;
+  height: auto;
+}
+
+.class-image {
+  width: 10em;
+  display: block;
+  border-radius: 0.25rem;
+}
+
+.image-card {
+  position: relative;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.play-card {
+  position: relative;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  width: 200px;
+  height: 300px;
+}
+
+.ability-grid {
+  gap: 5px;
+}
+
+.ability-image {
+  width: 10em;
+  display: block;
+  border-radius: 0.25rem;
+  object-fit: cover;
+}
+
+.image-card:hover .ability-image {
+  width: 10em;
+}
+
 .play-card:hover .ability-image {
   width: 10em;
 }
 
-/* Blue selection glow */
-.play-card.selected .ability-image,
-.image-card.chosen .ability-image {
-  box-shadow: 0 0px 5px 5px #3b82f6;
+.image-card.chosen .ability-image,
+.play-card.selected .ability-image {
+  box-shadow: 0 0 5px 5px #3b82f6;
 }
 
-/* Battle goals horizontal */
 .battle-goal-row {
   display: flex;
+  flex-wrap: nowrap;
   gap: 6px;
   overflow-x: auto;
+  align-items: flex-start;
 }
 
 .battle-goal-card {
+  position: relative;
   width: 160px;
-  flex-shrink: 0;
+  flex: 0 0 auto;
+}
+
+.battle-goal-image {
+  width: 100%;
+  display: block;
+  border-radius: 0.25rem;
+}
+
+.battle-goal-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
 }
