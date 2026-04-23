@@ -1,0 +1,89 @@
+<link rel="stylesheet" href="/css/play.css">
+
+<section class="play-shell">
+  <div class="play-header">
+    <div>
+      <h1>Setup: <%= game.title %></h1>
+      <p>Choose an existing configuration or create your own.</p>
+    </div>
+    <a class="play-link" href="<%= game.bgg_url %>" target="_blank" rel="noopener noreferrer">BoardGameGeek</a>
+  </div>
+
+  <div class="play-grid two-column">
+    <section class="play-panel">
+      <h2>Available Configurations</h2>
+
+      <div class="config-list">
+        <% if (!configurations.length) { %>
+          <p>No configurations exist yet for this game.</p>
+        <% } %>
+        <% configurations.forEach(config => { %>
+          <label class="config-card">
+            <input type="radio" name="configurationId" value="<%= config.id %>" <%= defaultConfig && defaultConfig.id === config.id ? 'checked' : '' %>>
+            <div>
+              <strong><%= config.name %></strong>
+              <p><%= config.description || 'No description' %></p>
+              <small>By <%= config.display_name || config.username %></small>
+            </div>
+          </label>
+        <% }) %>
+      </div>
+    </section>
+
+    <section class="play-panel">
+      <h2>Build / Launch Session</h2>
+      <form id="play-setup-form">
+        <input type="hidden" name="gameId" value="<%= game.id %>">
+
+        <label for="session-title">Session Title</label>
+        <input id="session-title" name="title" type="text" value="<%= game.title %>">
+
+        <label for="session-visibility">Visibility</label>
+        <select id="session-visibility" name="visibility">
+          <option value="public" <%= initialVisibility === 'public' ? 'selected' : '' %>>Public</option>
+          <option value="private" <%= initialVisibility === 'private' ? 'selected' : '' %>>Private</option>
+        </select>
+
+        <label for="session-max-players">Player Limit</label>
+        <input id="session-max-players" name="maxPlayers" type="number" min="<%= game.min_players || 1 %>" max="<%= game.max_players || 4 %>" value="<%= game.max_players || 4 %>">
+
+        <div class="builder-shell">
+          <div class="builder-toolbar">
+            <button type="button" class="play-btn secondary widget-btn" data-widget-type="text">Text</button>
+            <button type="button" class="play-btn secondary widget-btn" data-widget-type="counter">Counter</button>
+            <button type="button" class="play-btn secondary widget-btn" data-widget-type="token">Token</button>
+            <button type="button" class="play-btn secondary widget-btn" data-widget-type="note">Note</button>
+          </div>
+
+          <div id="layout-builder" class="layout-builder"></div>
+        </div>
+
+        <label for="config-name">Configuration Name</label>
+        <input id="config-name" name="configName" type="text" value="My <%= game.title %> Layout">
+
+        <label for="config-description">Configuration Description</label>
+        <textarea id="config-description" name="configDescription"></textarea>
+
+        <label class="inline-check"><input type="checkbox" id="config-public" checked> Add to community configurations</label>
+        <label class="inline-check"><input type="checkbox" id="config-default" checked> Save as my default for this game</label>
+
+        <div class="setup-actions">
+          <button type="button" id="save-config-btn" class="play-btn secondary">Save Configuration</button>
+          <button type="submit" class="play-btn">Start</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</section>
+
+<script>
+  window.PLAY_SETUP_BOOTSTRAP = {
+    gameId: <%- JSON.stringify(game.id) %>,
+    defaultLayout: <%- JSON.stringify(defaultConfig ? JSON.parse(defaultConfig.layout_json) : { gridSize: 5, widgets: [] }) %>,
+    playerBounds: {
+      min: <%- JSON.stringify(game.min_players || 1) %>,
+      max: <%- JSON.stringify(game.max_players || 4) %>
+    }
+  };
+</script>
+<script src="/js/play-setup.js"></script>
