@@ -1,0 +1,42 @@
+<link rel="stylesheet" href="/css/play.css">
+
+<section class="play-shell">
+  <div class="play-header">
+    <div>
+      <h1><%= session.title %></h1>
+      <p><%= session.game_title %></p>
+    </div>
+    <div class="session-meta">
+      <span><%= members.length %>/<%= session.max_players %> players</span>
+    </div>
+  </div>
+
+  <div class="play-grid two-column">
+    <section class="play-panel">
+      <h2>Board</h2>
+      <div id="session-board" class="layout-builder"></div>
+    </section>
+
+    <aside class="play-panel">
+      <h2>Players</h2>
+      <ul class="player-list">
+        <% members.forEach(m => { %>
+          <li><strong><%= m.display_name || m.username %></strong> (<%= m.role %>)</li>
+        <% }) %>
+      </ul>
+
+      <% if (session.host_user_id === currentUser.id) { %>
+        <button id="terminate-btn" class="play-btn danger">End Session</button>
+      <% } %>
+    </aside>
+  </div>
+</section>
+
+<script>
+  window.PLAY_SESSION_BOOTSTRAP = {
+    sessionId: <%- JSON.stringify(session.id) %>,
+    state: <%- stateJson %>,
+    isHost: <%- JSON.stringify(session.host_user_id === currentUser.id) %>
+  };
+</script>
+<script src="/js/play-session.js"></script>
