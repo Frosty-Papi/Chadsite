@@ -98,6 +98,35 @@ app.get("/api/deck/battle-goals", (req, res) => {
   }
 });
 
+app.get("/api/deck/class-icons", (req, res) => {
+  try {
+    const dataDir = path.join(__dirname, "views", "deck", "data");
+    const classIcons = {};
+
+    function walk(dir) {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(full);
+        } else if (entry.isFile()) {
+          const m = entry.name.match(/^([a-z]{2})-back\.(png|jpg|jpeg|webp)$/i);
+          if (m) {
+            const code = m[1].toLowerCase();
+            const rel = path.relative(dataDir, full).split(path.sep).join("/");
+            if (!classIcons[code]) classIcons[code] = rel;
+          }
+        }
+      }
+    }
+
+    walk(dataDir);
+    res.json({ classIcons });
+  } catch (err) {
+    console.error("Failed to list class icons", err);
+    res.status(500).json({ classIcons: {} });
+  }
+});
+
 app.get("/deck-modern", (req, res) => {
   res.render("deck-modern");
 });
