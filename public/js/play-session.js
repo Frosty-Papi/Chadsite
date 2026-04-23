@@ -1,35 +1,47 @@
-const board=document.getElementById('session-board');
-let state=window.PLAY_SESSION_BOOTSTRAP.state||{};
+const root = document.getElementById("play-session-root");
+const board = document.getElementById("session-board");
 
-function getCSRFToken(){return document.querySelector('meta[name="csrf-token"]')?.content||"";}
-
-function render(){
-  board.innerHTML='';
-  (state.widgets||[]).forEach(w=>{
-    const el=document.createElement('div');
-    el.className='widget';
-    el.style.left=w.x+'px';
-    el.style.top=w.y+'px';
-    el.style.width=w.width+'px';
-    el.style.height=w.height+'px';
-    el.textContent=w.type;
-    board.appendChild(el);
-  });
+let state = {};
+try {
+  state = JSON.parse(root?.dataset.state || "{}");
+} catch {
+  state = {};
 }
 
-async function sync(){
-  await fetch(`/api/play/sessions/${window.PLAY_SESSION_BOOTSTRAP.sessionId}/state`,{
-    method:'POST',headers:{'Content-Type':'application/json','CSRF-Token':getCSRFToken()},
-    body:JSON.stringify({state})
+const sessionId = root?.dataset.sessionId || "";
+
+function getCSRFToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.content || "";
+}
+
+function render() {
+  if (!board) return;
+  board.innerHTML = "";
+
+  (state.widgets || []).forEach((w) => {
+    const el = document.createElement("div");
+    el.className = "widget";
+    el.style.left = `${w.x || 0}px`;
+    el.style.top = `${w.y || 0}px`;
+    el.style.width = `${w.width || w.w || 100}px`;
+    el.style.height = `${w.height || w.h || 50}px`;
+    el.textContent = w.type || "widget";
+    board.appendChild(el);
   });
 }
 
 render();
 
-document.getElementById('terminate-btn')?.addEventListener('click',async ()=>{
-  await fetch(`/api/play/sessions/${window.PLAY_SESSION_BOOTSTRAP.sessionId}/terminate`,{
-    method:'POST',headers:{'Content-Type':'application/json','CSRF-Token':getCSRFToken()},
-    body:JSON.stringify({outcome:'completed'})
+document.getElementById("terminate-btn")?.addEventListener("click", async () => {
+  await fetch(`/api/play/sessions/${sessionId}/terminate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "CSRF-Token": getCSRFToken(),
+              "Accept": "application/json"
+    },
+    body: JSON.stringify({ outcome: "completed" })
   });
-  location.href='/play';
+
+  location.href = "/play";
 });
