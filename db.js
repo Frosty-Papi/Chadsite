@@ -7,8 +7,8 @@ const ROOT = __dirname;
 function listDbCandidates(dir) {
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir)
-  .filter(f => /\.(db|sqlite|sqlite3)$/i.test(f))
-  .map(f => path.join(dir, f));
+    .filter(f => /\.(db|sqlite|sqlite3)$/i.test(f))
+    .map(f => path.join(dir, f));
 }
 
 function resolveDatabasePath() {
@@ -40,6 +40,14 @@ function hasColumn(table, column) {
   return rows.some(r => r.name === column);
 }
 
+function normalizeName(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
 // USERS
 
 db.prepare(`
@@ -57,10 +65,10 @@ CREATE TABLE IF NOT EXISTS users (
 
 const userColumns = [
   ["is_disabled", "INTEGER NOT NULL DEFAULT 0"],
-["disabled_until", "TEXT"],
-["disable_reason", "TEXT"],
-["must_reset_password", "INTEGER NOT NULL DEFAULT 0"],
-["password_reset_token", "INTEGER NOT NULL DEFAULT 0"]
+  ["disabled_until", "TEXT"],
+  ["disable_reason", "TEXT"],
+  ["must_reset_password", "INTEGER NOT NULL DEFAULT 0"],
+  ["password_reset_token", "INTEGER NOT NULL DEFAULT 0"]
 ];
 
 for (const [col, def] of userColumns) {
@@ -83,9 +91,9 @@ CREATE TABLE IF NOT EXISTS services (
 
 const serviceColumns = [
   ["slug", "TEXT"],
-["min_role", "TEXT NOT NULL DEFAULT 'user'"],
-["is_enabled", "INTEGER NOT NULL DEFAULT 1"],
-["sort_order", "INTEGER NOT NULL DEFAULT 0"]
+  ["min_role", "TEXT NOT NULL DEFAULT 'user'"],
+  ["is_enabled", "INTEGER NOT NULL DEFAULT 1"],
+  ["sort_order", "INTEGER NOT NULL DEFAULT 0"]
 ];
 
 for (const [col, def] of serviceColumns) {
@@ -104,101 +112,6 @@ CREATE TABLE IF NOT EXISTS permissions (
 )
 `).run();
 
-// PLAY: friend requests
-
-db.prepare(`
-CREATE TABLE IF NOT EXISTS friend_requests (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  sender_id INTEGER NOT NULL,
-  receiver_id INTEGER NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending',
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
-                                            FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
-                                            CHECK (status IN ('pending', 'accepted', 'rejected')),
-                                            CHECK (sender_id != receiver_id),
-                                            UNIQUE(sender_id, receiver_id)
-)
-`).run();
-
-db.prepare(`
-CREATE INDEX IF NOT EXISTS idx_friend_requests_sender
-ON friend_requests(sender_id)
-`).run();
-
-db.prepare(`
-CREATE INDEX IF NOT EXISTS idx_friend_requests_receiver
-ON friend_requests(receiver_id)
-`).run();
-
-db.prepare(`
-CREATE INDEX IF NOT EXISTS idx_friend_requests_status
-ON friend_requests(status)
-`).run();
-
-// PLAY: confirmed friendships
-
-db.prepare(`
-CREATE TABLE IF NOT EXISTS friends (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  friend_id INTEGER NOT NULL,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                                    FOREIGN KEY (friend_id) REFERENCES users(id) ON DELETE CASCADE,
-                                    CHECK (user_id != friend_id),
-                                    UNIQUE(user_id, friend_id)
-)
-`).run();
-
-db.prepare(`
-CREATE INDEX IF NOT EXISTS idx_friends_user_id
-ON friends(user_id)
-`).run();
-
-db.prepare(`
-CREATE INDEX IF NOT EXISTS idx_friends_friend_id
-ON friends(friend_id)
-`).run();
-
-// PLAY: game sessions
-
-db.prepare(`
-CREATE TABLE IF NOT EXISTS game_sessions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  host_user_id INTEGER NOT NULL,
-  is_private INTEGER NOT NULL DEFAULT 0,
-  current_users INTEGER NOT NULL DEFAULT 1,
-  max_users INTEGER NOT NULL DEFAULT 4,
-  status TEXT NOT NULL DEFAULT 'open',
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (host_user_id) REFERENCES users(id) ON DELETE CASCADE,
-                                          CHECK (is_private IN (0,1)),
-                                          CHECK (status IN ('open','closed')),
-                                          CHECK (current_users >= 0),
-                                          CHECK (max_users > 0),
-                                          CHECK (current_users <= max_users)
-)
-`).run();
-
-db.prepare(`
-CREATE INDEX IF NOT EXISTS idx_game_sessions_host_user_id
-ON game_sessions(host_user_id)
-`).run();
-
-db.prepare(`
-CREATE INDEX IF NOT EXISTS idx_game_sessions_is_private
-ON game_sessions(is_private)
-`).run();
-
-db.prepare(`
-CREATE INDEX IF NOT EXISTS idx_game_sessions_status
-ON game_sessions(status)
-`).run();
-
 // Normalize roles
 
 db.prepare(`UPDATE users SET role = 'user' WHERE role NOT IN ('user','admin','super_admin')`).run();
@@ -209,10 +122,7 @@ const services = db.prepare("SELECT id, name, path, slug FROM services").all();
 const seen = new Set();
 
 function toSlug(str) {
-  return String(str || "service")
-  .toLowerCase()
-  .replace(/[^a-z0-9]+/g, "-")
-  .replace(/(^-|-$)/g, "");
+  return String(str || "service").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
 for (const s of services) {
@@ -230,21 +140,155 @@ for (const s of services) {
   }
 }
 
-// Seed Play service if missing
+// Ensure core service entries exist
 
-const playService = db.prepare("SELECT id FROM services WHERE path = ?").get("/play");
-if (!playService) {
-  const maxSort = db.prepare("SELECT COALESCE(MAX(sort_order), 0) AS maxSort FROM services").get();
-  db.prepare(`
-  INSERT INTO services (name, path, icon, is_external, slug, min_role, is_enabled, sort_order)
-  VALUES (?, ?, ?, 0, ?, 'user', 1, ?)
-  `).run(
-    "Play",
-    "/play",
-    "🎮",
-    "play",
-    (maxSort?.maxSort || 0) + 1
-  );
+const defaultServices = [
+  { name: "Deck", path: "/deck", slug: "deck", min_role: "user", sort_order: 0 },
+  { name: "Play", path: "/play", slug: "play", min_role: "user", sort_order: 10 }
+];
+
+for (const service of defaultServices) {
+  const existing = db.prepare("SELECT id FROM services WHERE path = ?").get(service.path);
+  if (!existing) {
+    db.prepare(`
+      INSERT INTO services (name, path, slug, min_role, is_enabled, sort_order, is_external)
+      VALUES (?, ?, ?, ?, 1, ?, 0)
+    `).run(service.name, service.path, service.slug, service.min_role, service.sort_order);
+  }
 }
+
+// FRIEND REQUESTS
+
+db.prepare(`
+CREATE TABLE IF NOT EXISTS friend_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  requester_user_id INTEGER NOT NULL,
+  addressee_user_id INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted','rejected','cancelled')),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(requester_user_id, addressee_user_id),
+  FOREIGN KEY (requester_user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (addressee_user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CHECK (requester_user_id != addressee_user_id)
+)
+`).run();
+
+db.prepare(`
+CREATE TABLE IF NOT EXISTS friendships (
+  user_id INTEGER NOT NULL,
+  friend_user_id INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, friend_user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (friend_user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CHECK (user_id != friend_user_id)
+)
+`).run();
+
+// PLAY GAMES CATALOG
+
+db.prepare(`
+CREATE TABLE IF NOT EXISTS play_games (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  normalized_title TEXT NOT NULL,
+  bgg_url TEXT NOT NULL UNIQUE,
+  bgg_game_id TEXT NOT NULL UNIQUE,
+  created_by_user_id INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE RESTRICT
+)
+`).run();
+
+db.prepare(`
+CREATE UNIQUE INDEX IF NOT EXISTS idx_play_games_normalized_title
+ON play_games(normalized_title)
+`).run();
+
+// GAME METADATA
+
+db.prepare(`
+CREATE TABLE IF NOT EXISTS play_game_settings (
+  game_id INTEGER PRIMARY KEY,
+  min_players INTEGER NOT NULL DEFAULT 1,
+  max_players INTEGER NOT NULL DEFAULT 4,
+  box_image_url TEXT,
+  bgg_title TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (game_id) REFERENCES play_games(id) ON DELETE CASCADE
+)
+`).run();
+
+// CONFIGURATIONS
+
+db.prepare(`
+CREATE TABLE IF NOT EXISTS play_game_configurations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  game_id INTEGER NOT NULL,
+  owner_user_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  layout_json TEXT NOT NULL,
+  is_default_for_owner INTEGER NOT NULL DEFAULT 0,
+  is_public INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (game_id) REFERENCES play_games(id) ON DELETE CASCADE,
+  FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE CASCADE
+)
+`).run();
+
+db.prepare(`
+CREATE UNIQUE INDEX IF NOT EXISTS idx_play_default_config_per_owner_game
+ON play_game_configurations(game_id, owner_user_id)
+WHERE is_default_for_owner = 1
+`).run();
+
+// LIVE SESSIONS
+
+db.prepare(`
+CREATE TABLE IF NOT EXISTS play_sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_key TEXT NOT NULL UNIQUE,
+  host_user_id INTEGER NOT NULL,
+  game_id INTEGER NOT NULL,
+  configuration_id INTEGER,
+  title TEXT NOT NULL,
+  visibility TEXT NOT NULL CHECK(visibility IN ('public','private')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('draft','active','completed','abandoned')),
+  current_players INTEGER NOT NULL DEFAULT 1,
+  max_players INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  started_at TEXT,
+  ended_at TEXT,
+  FOREIGN KEY (host_user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (game_id) REFERENCES play_games(id) ON DELETE RESTRICT,
+  FOREIGN KEY (configuration_id) REFERENCES play_game_configurations(id) ON DELETE SET NULL
+)
+`).run();
+
+db.prepare(`
+CREATE TABLE IF NOT EXISTS play_session_members (
+  session_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  role TEXT NOT NULL DEFAULT 'player' CHECK(role IN ('host','player')),
+  PRIMARY KEY (session_id, user_id),
+  FOREIGN KEY (session_id) REFERENCES play_sessions(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+)
+`).run();
+
+db.prepare(`
+CREATE TABLE IF NOT EXISTS play_session_state (
+  session_id INTEGER PRIMARY KEY,
+  state_json TEXT NOT NULL DEFAULT '{}',
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (session_id) REFERENCES play_sessions(id) ON DELETE CASCADE
+)
+`).run();
 
 module.exports = db;
