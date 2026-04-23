@@ -1,6 +1,9 @@
 <link rel="stylesheet" href="/css/play.css">
 
-<section class="play-shell">
+<section class="play-shell" id="play-session-root"
+  data-session-id="<%= session.id %>"
+  data-state="<%- stateJson.replace(/&/g, '&amp;').replace(/"/g, '&quot;') %>"
+  data-is-host="<%= session.host_user_id === currentUser.id %>">
   <div class="play-header">
     <div>
       <h1><%= session.title %></h1>
@@ -32,11 +35,4 @@
   </div>
 </section>
 
-<script>
-  window.PLAY_SESSION_BOOTSTRAP = {
-    sessionId: <%- JSON.stringify(session.id) %>,
-    state: <%- stateJson %>,
-    isHost: <%- JSON.stringify(session.host_user_id === currentUser.id) %>
-  };
-</script>
 <script src="/js/play-session.js"></script>
