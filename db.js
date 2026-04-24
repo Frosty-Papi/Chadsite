@@ -132,9 +132,10 @@ for (const s of services) {
   }
 }
 
-// Ensure active core service entries exist. Deck is deprecated and intentionally not auto-seeded.
+// Ensure core service entries exist
 
 const defaultServices = [
+  { name: "Deck", path: "/deck", slug: "deck", min_role: "user", sort_order: 0 },
   { name: "Play", path: "/play", slug: "play", min_role: "user", sort_order: 10 }
 ];
 
@@ -213,44 +214,140 @@ CREATE TABLE IF NOT EXISTS play_game_settings (
 )
 `).run();
 
-// PLAY LOBBIES
-// Existing databases may still have older configuration/state tables and columns. They are intentionally left in place
-// for non-destructive migration, but the application no longer uses them.
+// PLAY SESSIONS (SAFE MIGRATION)
+
+function tableExists(table) {
+  return !!db.prepare(`
+  SELECT 1 FROM sqlite_master WHERE type='table' AND name=?
+  `).get(table);
+}
+
+function recreatePlaySessionsTable() {
+  db.transaction(() => {
+    db.prepare(`DROP TABLE IF EXISTS play_sessions_new`).run();
+
+    db.prepare(`
+    CREATE TABLE play_sessions_new (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_key TEXT NOT NULL UNIQUE,
+      host_user_id INTEGER NOT NULL,
+      game_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+
+      visibility TEXT NOT NULL DEFAULT 'public'
+      CHECK(visibility IN ('public','private')),
+
+                                    status TEXT NOT NULL DEFAULT 'lobby'
+                                    CHECK(status IN ('draft','lobby','active','completed','abandoned')),
+
+                                    current_players INTEGER NOT NULL DEFAULT 1 CHECK(current_players >= 0),
+                                    max_players INTEGER NOT NULL CHECK(max_players >= 1),
+
+                                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                    started_at TEXT,
+                                    ended_at TEXT,
+
+                                    FOREIGN KEY (host_user_id) REFERENCES users(id) ON DELETE CASCADE,
+                                    FOREIGN KEY (game_id) REFERENCES play_games(id) ON DELETE RESTRICT
+    )
+    `).run();
+
+    if (tableExists("play_sessions")) {
+      db.prepare(`
+      INSERT INTO play_sessions_new (
+        id,
+        session_key,
+        host_user_id,
+        game_id,
+        title,
+        visibility,
+        status,
+        current_players,
+        max_players,
+        created_at,
+        started_at,
+        ended_at
+      )
+      SELECT
+      id,
+      session_key,
+      host_user_id,
+      game_id,
+      title,
+      CASE
+      WHEN visibility IN ('public','private') THEN visibility
+      ELSE 'public'
+      END,
+      CASE
+      WHEN status IN ('draft','open') THEN 'lobby'
+      WHEN status IN ('started') THEN 'active'
+      WHEN status IN ('lobby','active','completed','abandoned') THEN status
+      WHEN status = 'closed' THEN 'completed'
+      ELSE 'lobby'
+      END,
+      COALESCE(current_players, 1),
+                 COALESCE(max_players, 4),
+                 COALESCE(created_at, CURRENT_TIMESTAMP),
+                 started_at,
+                 ended_at
+                 FROM play_sessions
+                 `).run();
+
+                 db.prepare(`DROP TABLE play_sessions`).run();
+    }
+
+    db.prepare(`ALTER TABLE play_sessions_new RENAME TO play_sessions`).run();
+  })();
+}
+
+recreatePlaySessionsTable();
+
+// INDEXES
 
 db.prepare(`
-CREATE TABLE IF NOT EXISTS play_sessions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  session_key TEXT NOT NULL UNIQUE,
-  host_user_id INTEGER NOT NULL,
-  game_id INTEGER NOT NULL,
-  title TEXT NOT NULL,
-  visibility TEXT NOT NULL CHECK(visibility IN ('public','private')),
-  status TEXT NOT NULL DEFAULT 'lobby' CHECK(status IN ('lobby','started','completed','abandoned','draft','active')),
-  current_players INTEGER NOT NULL DEFAULT 1,
-  max_players INTEGER NOT NULL,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  started_at TEXT,
-  ended_at TEXT,
-  FOREIGN KEY (host_user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (game_id) REFERENCES play_games(id) ON DELETE RESTRICT
-)
+CREATE INDEX IF NOT EXISTS idx_play_sessions_visibility_status
+ON play_sessions(visibility, status)
 `).run();
 
-if (hasColumn("play_sessions", "status")) {
-  db.prepare(`UPDATE play_sessions SET status = 'lobby' WHERE status IN ('active','draft','open')`).run();
-  db.prepare(`UPDATE play_sessions SET status = 'completed' WHERE status = 'closed'`).run();
-}
+db.prepare(`
+CREATE INDEX IF NOT EXISTS idx_play_sessions_host_status
+ON play_sessions(host_user_id, status)
+`).run();
+
+db.prepare(`
+CREATE INDEX IF NOT EXISTS idx_play_sessions_game_id
+ON play_sessions(game_id)
+`).run();
+
+db.prepare(`
+CREATE INDEX IF NOT EXISTS idx_play_sessions_created_at
+ON play_sessions(created_at DESC)
+`).run();
+
+// MEMBERS
 
 db.prepare(`
 CREATE TABLE IF NOT EXISTS play_session_members (
   session_id INTEGER NOT NULL,
   user_id INTEGER NOT NULL,
   joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  role TEXT NOT NULL DEFAULT 'player' CHECK(role IN ('host','player')),
-  PRIMARY KEY (session_id, user_id),
-  FOREIGN KEY (session_id) REFERENCES play_sessions(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  role TEXT NOT NULL DEFAULT 'player'
+  CHECK(role IN ('host','player')),
+                                                 PRIMARY KEY (session_id, user_id),
+                                                 FOREIGN KEY (session_id) REFERENCES play_sessions(id) ON DELETE CASCADE,
+                                                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 )
+`).run();
+
+db.prepare(`
+CREATE INDEX IF NOT EXISTS idx_play_session_members_user
+ON play_session_members(user_id)
+`).run();
+
+db.prepare(`
+CREATE INDEX IF NOT EXISTS idx_play_session_members_session_role
+ON play_session_members(session_id, role)
 `).run();
 
 module.exports = db;
