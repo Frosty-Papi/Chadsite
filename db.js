@@ -132,10 +132,9 @@ for (const s of services) {
   }
 }
 
-// Ensure core service entries exist
+// Ensure active core service entries exist. Deck is deprecated and intentionally not auto-seeded.
 
 const defaultServices = [
-  { name: "Deck", path: "/deck", slug: "deck", min_role: "user", sort_order: 0 },
   { name: "Play", path: "/play", slug: "play", min_role: "user", sort_order: 10 }
 ];
 
