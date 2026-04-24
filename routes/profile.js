@@ -15,13 +15,17 @@ const router = express.Router();
 
 const upload = multer({
   storage: multer.memoryStorage(),
-                      limits: { fileSize: 5 * 1024 * 1024 }
+  limits: { fileSize: 5 * 1024 * 1024 }
 });
 
 const MAX_AVATAR_BYTES = 1 * 1024 * 1024;
 
 function normalizeUsername(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function wantsJson(req) {
+  return req.xhr || String(req.headers.accept || "").includes("application/json");
 }
 
 router.get("/profile", requireLogin, (req, res) => {
@@ -75,47 +79,67 @@ router.get("/profile", requireLogin, (req, res) => {
 
 router.post("/profile/update", requireLogin, upload.single("avatar"), async (req, res) => {
   const user = getUser(req);
-  const displayName = (req.body.display_name || "").trim();
+  const hasDisplayName = Object.prototype.hasOwnProperty.call(req.body, "display_name");
+  const displayName = hasDisplayName ? String(req.body.display_name || "").trim() : null;
 
   const existingUser = db.prepare("SELECT avatar FROM users WHERE id = ?").get(user.id);
   const oldAvatar = existingUser?.avatar;
 
   let newAvatarPath = null;
 
-  if (req.file) {
-    ensureAvatarDir();
+  try {
+    if (req.file) {
+      ensureAvatarDir();
 
-    const filename = crypto.randomUUID() + ".webp";
-    const outputPath = path.join(__dirname, "..", "storage", "avatars", filename);
+      const filename = crypto.randomUUID() + ".webp";
+      const outputPath = path.join(__dirname, "..", "storage", "avatars", filename);
 
-    const buffer = await sharp(req.file.buffer)
-    .rotate()
-    .resize(300, 300, { fit: "cover" })
-    .webp({ quality: 82 })
-    .toBuffer();
+      const buffer = await sharp(req.file.buffer)
+        .rotate()
+        .resize(300, 300, { fit: "cover" })
+        .webp({ quality: 82 })
+        .toBuffer();
 
-    if (buffer.length > MAX_AVATAR_BYTES) {
-      return res.status(400).send("Avatar too large after processing");
+      if (buffer.length > MAX_AVATAR_BYTES) {
+        if (wantsJson(req)) return res.status(400).json({ error: "Avatar too large after processing" });
+        return res.status(400).send("Avatar too large after processing");
+      }
+
+      await fs.promises.writeFile(outputPath, buffer);
+      newAvatarPath = `/uploads/avatars/${filename}`;
     }
 
-    await fs.promises.writeFile(outputPath, buffer);
+    if (newAvatarPath && hasDisplayName) {
+      db.prepare(`UPDATE users SET display_name = ?, avatar = ? WHERE id = ?`)
+        .run(displayName || null, newAvatarPath, user.id);
+    } else if (newAvatarPath) {
+      db.prepare(`UPDATE users SET avatar = ? WHERE id = ?`)
+        .run(newAvatarPath, user.id);
+    } else if (hasDisplayName) {
+      db.prepare(`UPDATE users SET display_name = ? WHERE id = ?`)
+        .run(displayName || null, user.id);
+    }
 
-    newAvatarPath = `/uploads/avatars/${filename}`;
-  }
-
-  if (newAvatarPath) {
-    db.prepare(`UPDATE users SET display_name = ?, avatar = ? WHERE id = ?`)
-    .run(displayName || null, newAvatarPath, user.id);
-
-    if (oldAvatar && oldAvatar !== newAvatarPath) {
+    if (newAvatarPath && oldAvatar && oldAvatar !== newAvatarPath) {
       deleteAvatarFile(oldAvatar);
     }
-  } else {
-    db.prepare(`UPDATE users SET display_name = ? WHERE id = ?`)
-    .run(displayName || null, user.id);
-  }
 
-  res.redirect("/profile");
+    if (wantsJson(req)) {
+      const updatedUser = db.prepare(`
+        SELECT id, username, display_name, avatar
+        FROM users
+        WHERE id = ?
+      `).get(user.id);
+
+      return res.json({ success: true, user: updatedUser, avatar: updatedUser.avatar });
+    }
+
+    res.redirect("/profile");
+  } catch (error) {
+    if (newAvatarPath) deleteAvatarFile(newAvatarPath);
+    if (wantsJson(req)) return res.status(500).json({ error: "Avatar upload failed" });
+    res.status(500).send("Avatar upload failed");
+  }
 });
 
 router.post("/profile/password", requireLogin, (req, res) => {
