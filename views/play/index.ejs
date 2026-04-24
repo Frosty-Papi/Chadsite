@@ -4,13 +4,13 @@
   <div class="play-header">
     <div>
       <h1>Play</h1>
-      <p>Host or join an active board game session.</p>
+      <p>Host or join a game lobby.</p>
     </div>
   </div>
 
   <div class="play-grid">
     <aside class="play-panel host-panel">
-      <h2>Host a Game</h2>
+      <h2>Host a Lobby</h2>
 
       <form id="host-game-form" autocomplete="off">
         <label for="game-search">Game Title</label>
@@ -21,18 +21,18 @@
 
         <label for="host-visibility">Visibility</label>
         <select id="host-visibility" name="visibility">
-          <option value="public">Public Games</option>
-          <option value="private">Private Games</option>
+          <option value="public">Public Lobby</option>
+          <option value="private">Private Friends Lobby</option>
         </select>
 
-        <button type="submit" class="play-btn">Continue</button>
+        <button type="submit" class="play-btn">Host Lobby</button>
       </form>
     </aside>
 
     <section class="play-panel tables-panel">
       <div class="tabs">
-        <button class="tab-btn active" data-target="public-games" type="button">Public Games</button>
-        <button class="tab-btn" data-target="private-games" type="button">Private Games</button>
+        <button class="tab-btn active" data-target="public-games" type="button">Public Lobbies</button>
+        <button class="tab-btn" data-target="private-games" type="button">Private Lobbies</button>
       </div>
 
       <div id="public-games" class="tab-content active">
@@ -47,11 +47,11 @@
           </thead>
           <tbody>
             <% if (!publicSessions.length) { %>
-              <tr><td colspan="4">No public sessions are active.</td></tr>
+              <tr><td colspan="4">No public lobbies are open.</td></tr>
             <% } %>
             <% publicSessions.forEach(session => { %>
               <tr>
-                <td><%= session.title %></td>
+                <td><a href="<%= session.bgg_url %>" target="_blank" rel="noopener noreferrer"><%= session.title %></a></td>
                 <td><%= session.display_name || session.username %></td>
                 <td><%= session.current_players %>/<%= session.max_players %></td>
                 <td><a class="play-link" href="/play/session/<%= session.session_key %>">Join</a></td>
@@ -73,11 +73,11 @@
           </thead>
           <tbody>
             <% if (!privateSessions.length) { %>
-              <tr><td colspan="4">No private friend sessions are active.</td></tr>
+              <tr><td colspan="4">No private friend lobbies are open.</td></tr>
             <% } %>
             <% privateSessions.forEach(session => { %>
               <tr>
-                <td><%= session.title %></td>
+                <td><a href="<%= session.bgg_url %>" target="_blank" rel="noopener noreferrer"><%= session.title %></a></td>
                 <td><%= session.display_name || session.username %></td>
                 <td><%= session.current_players %>/<%= session.max_players %></td>
                 <td><a class="play-link" href="/play/session/<%= session.session_key %>">Join</a></td>
