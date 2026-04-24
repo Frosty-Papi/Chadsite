@@ -306,6 +306,30 @@
     max-width: 100% !important;
 }
 
+.avatar-cropper .cropper-view-box,
+.avatar-cropper .cropper-face {
+    border-radius: 50%;
+}
+
+.avatar-cropper .cropper-view-box {
+    outline: 2px solid rgba(255,255,255,0.85);
+    outline-color: rgba(255,255,255,0.85);
+    box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.72);
+}
+
+.avatar-cropper .cropper-face {
+    background-color: transparent;
+}
+
+.avatar-cropper .cropper-line,
+.avatar-cropper .cropper-point {
+    display: none;
+}
+
+.avatar-cropper .cropper-modal {
+    opacity: 0.15;
+}
+
 .avatar-actions {
     display: flex;
     gap: 0.75rem;
@@ -323,38 +347,4 @@
     margin-top: 0.65rem;
     color: #94a3b8;
     font-size: 0.85rem;
-}
-
-/* --- TRUE CIRCULAR MASK OVERLAY --- */
-.avatar-cropper {
-    position: relative;
-}
-
-.avatar-cropper::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-
-    /* dark overlay with circular cutout */
-    background: radial-gradient(
-        circle at center,
-        transparent 42%,
-        rgba(2, 6, 23, 0.85) 43%
-    );
-}
-
-/* optional subtle border ring */
-.avatar-cropper::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-
-    background: radial-gradient(
-        circle at center,
-        transparent 40%,
-        rgba(255,255,255,0.15) 41%,
-                                transparent 42%
-    );
 }
