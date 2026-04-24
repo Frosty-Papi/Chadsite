@@ -301,30 +301,31 @@
 }
 
 .avatar-cropper .cropper-container {
-    width: 300px !important;
-    height: 300px !important;
+    width: 280px !important;
+    height: 280px !important;
     max-width: 100% !important;
     margin: 0 auto;
-    border-radius: 10px;
-    background: transparent;
+    border-radius: 50%;
+    overflow: hidden !important;
+    background: #020617;
 }
 
 .avatar-cropper .cropper-wrap-box,
 .avatar-cropper .cropper-canvas,
-.avatar-cropper .cropper-drag-box,
-.avatar-cropper .cropper-container img {
-    overflow: visible !important;
+.avatar-cropper .cropper-drag-box {
+    overflow: hidden !important;
 }
 
 .avatar-cropper .cropper-view-box,
-.avatar-cropper .cropper-face {
+.avatar-cropper .cropper-face,
+.avatar-cropper .cropper-crop-box {
     border-radius: 50%;
 }
 
 .avatar-cropper .cropper-view-box {
     outline: 2px solid rgba(255,255,255,0.9);
     outline-color: rgba(255,255,255,0.9);
-    box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.72);
+    box-shadow: none;
 }
 
 .avatar-cropper .cropper-face {
