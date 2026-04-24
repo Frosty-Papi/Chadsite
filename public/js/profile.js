@@ -8,6 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const cancelBtn = document.getElementById("cancelAvatar");
     const status = document.getElementById("avatarStatus");
     const avatarBox = document.querySelector(".profile-card .avatar");
+    const STAGE_SIZE = 300;
+    const CROP_SIZE = 224;
 
     function resetCropper() {
         if (cropper) cropper.destroy();
@@ -47,6 +49,20 @@ document.addEventListener("DOMContentLoaded", () => {
         replaceAvatar(document.querySelector(".profile-trigger"), src, "avatar-img");
     }
 
+    function centerLockedCropBox() {
+        if (!cropper) return;
+
+        const containerData = cropper.getContainerData();
+        const size = Math.min(CROP_SIZE, containerData.width, containerData.height);
+
+        cropper.setCropBoxData({
+            width: size,
+            height: size,
+            left: (containerData.width - size) / 2,
+            top: (containerData.height - size) / 2
+        });
+    }
+
     input?.addEventListener("change", e => {
         const file = e.target.files[0];
         if (!file) return;
@@ -70,12 +86,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 aspectRatio: 1,
                 viewMode: 3,
                 dragMode: "move",
-                autoCropArea: 0.92,
+                autoCrop: true,
+                autoCropArea: 1,
                 background: false,
                 responsive: true,
                 restore: false,
                 guides: false,
-                center: true,
+                center: false,
                 highlight: false,
                 cropBoxMovable: false,
                 cropBoxResizable: false,
@@ -85,10 +102,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 zoomOnTouch: true,
                 zoomOnWheel: true,
                 wheelZoomRatio: 0.08,
-                minContainerWidth: 260,
-                minContainerHeight: 260,
+                minContainerWidth: STAGE_SIZE,
+                minContainerHeight: STAGE_SIZE,
                 ready() {
-                    cropper.cropper.classList.add("avatar-cropper-ready");
+                    centerLockedCropBox();
+                    this.cropper.classList.add("avatar-cropper-ready");
+                },
+                cropmove() {
+                    centerLockedCropBox();
+                },
+                zoom() {
+                    window.requestAnimationFrame(centerLockedCropBox);
                 }
             });
         };
