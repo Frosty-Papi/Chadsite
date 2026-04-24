@@ -8,8 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const cancelBtn = document.getElementById("cancelAvatar");
     const status = document.getElementById("avatarStatus");
     const avatarBox = document.querySelector(".profile-card .avatar");
-    const STAGE_SIZE = 300;
-    const CROP_SIZE = 224;
+    const STAGE_SIZE = 280;
 
     function resetCropper() {
         if (cropper) cropper.destroy();
@@ -49,21 +48,20 @@ document.addEventListener("DOMContentLoaded", () => {
         replaceAvatar(document.querySelector(".profile-trigger"), src, "avatar-img");
     }
 
-    function centerLockedCropBox() {
+    function lockCropToViewport() {
         if (!cropper) return;
-
-        const containerData = cropper.getContainerData();
-        const size = Math.min(CROP_SIZE, containerData.width, containerData.height);
+        const data = cropper.getContainerData();
+        const size = Math.min(data.width, data.height, STAGE_SIZE);
 
         cropper.setCropBoxData({
             width: size,
             height: size,
-            left: (containerData.width - size) / 2,
-            top: (containerData.height - size) / 2
+            left: (data.width - size) / 2,
+            top: (data.height - size) / 2
         });
     }
 
-    function coverCropStage() {
+    function coverViewport() {
         if (!cropper) return;
 
         const containerData = cropper.getContainerData();
@@ -81,7 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
             height
         });
 
-        centerLockedCropBox();
+        lockCropToViewport();
     }
 
     input?.addEventListener("change", e => {
@@ -101,11 +99,11 @@ document.addEventListener("DOMContentLoaded", () => {
             preview.src = evt.target.result;
             preview.style.display = "block";
             container.classList.remove("hidden");
-            if (status) status.textContent = "Pinch, wheel, or drag to position your avatar.";
+            if (status) status.textContent = "Drag to position. Pinch or wheel to zoom.";
 
             cropper = new Cropper(preview, {
                 aspectRatio: 1,
-                viewMode: 3,
+                viewMode: 1,
                 dragMode: "move",
                 autoCrop: true,
                 autoCropArea: 1,
@@ -126,14 +124,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 minContainerWidth: STAGE_SIZE,
                 minContainerHeight: STAGE_SIZE,
                 ready() {
-                    window.requestAnimationFrame(coverCropStage);
+                    window.requestAnimationFrame(coverViewport);
                     this.cropper.classList.add("avatar-cropper-ready");
                 },
                 cropmove() {
-                    centerLockedCropBox();
+                    lockCropToViewport();
                 },
                 zoom() {
-                    window.requestAnimationFrame(centerLockedCropBox);
+                    window.requestAnimationFrame(lockCropToViewport);
                 }
             });
         };
