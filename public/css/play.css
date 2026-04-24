@@ -3,21 +3,31 @@
     gap: 1.5rem;
 }
 
-.play-hero {
-    border: 1px solid #1e293b;
-    border-radius: 12px;
-    padding: 1.5rem;
-    background: rgba(2, 6, 23, 0.55);
+.play-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
 }
 
-.play-hero h2 {
-    margin-bottom: 0.75rem;
+.play-header h1 {
+    margin-bottom: 0.5rem;
     color: var(--accent);
 }
 
-.play-hero p {
+.play-header p {
     color: var(--muted);
     line-height: 1.6;
+}
+
+.play-grid {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 1.5rem;
+}
+
+.play-grid.two-column {
+    grid-template-columns: 1fr 360px;
 }
 
 .play-panel {
@@ -27,24 +37,24 @@
     background: rgba(2, 6, 23, 0.45);
 }
 
-.panel-heading {
+.play-panel h2,
+.play-panel h3 {
+    color: var(--text);
     margin-bottom: 1rem;
 }
 
-.panel-heading h3 {
-    color: var(--text);
+.play-panel label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--muted);
 }
 
-.play-form {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    align-items: center;
-}
-
-.play-form input[type="text"],
-.play-form input[type="number"] {
-    min-width: 220px;
+.play-panel input[type="text"],
+.play-panel input[type="url"],
+.play-panel input[type="number"],
+.play-panel select {
+    width: 100%;
+    margin-bottom: 1rem;
     padding: 0.8rem 1rem;
     border-radius: 10px;
     border: 1px solid #334155;
@@ -52,46 +62,59 @@
     color: var(--text);
 }
 
-.play-form button,
-.play-tabs button {
-    padding: 0.8rem 1rem;
+.play-btn,
+.play-link,
+.tab-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0.7rem 1rem;
     border-radius: 10px;
     border: 1px solid var(--accent);
     background: transparent;
     color: var(--accent);
+    text-decoration: none;
     cursor: pointer;
+    font: inherit;
 }
 
-.play-form button:hover,
-.play-tabs button:hover,
-.play-tabs button.active {
+.play-btn:hover,
+.play-link:hover,
+.tab-btn:hover,
+.tab-btn.active {
     background: var(--accent);
     color: #020617;
 }
 
-.checkbox-row {
-    display: inline-flex;
-    gap: 0.5rem;
-    align-items: center;
-    color: var(--muted);
+.play-btn.secondary {
+    border-color: #334155;
+    color: var(--text);
 }
 
-.play-tabs {
+.play-btn.secondary:hover {
+    background: #1e293b;
+    color: var(--text);
+}
+
+.play-link.inline {
+    min-height: auto;
+    padding: 0.3rem 0.55rem;
+}
+
+.tabs {
     display: flex;
     gap: 0.75rem;
     margin-bottom: 1rem;
+    flex-wrap: wrap;
 }
 
-.play-tab {
+.tab-content {
     display: none;
 }
 
-.play-tab.active {
+.tab-content.active {
     display: block;
-}
-
-.table-wrap {
-    overflow-x: auto;
 }
 
 .play-table {
@@ -110,19 +133,201 @@
     color: var(--accent);
 }
 
+.play-table a:not(.play-link) {
+    color: var(--text);
+    text-decoration: none;
+}
+
+.play-table a:not(.play-link):hover {
+    color: var(--accent);
+}
+
+.search-results {
+    display: grid;
+    gap: 0.5rem;
+    margin: -0.5rem 0 1rem;
+}
+
+.search-item {
+    width: 100%;
+    text-align: left;
+    padding: 0.75rem 0.85rem;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    background: #0f172a;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.search-item:hover,
+.search-item.new {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.selected-game-summary {
+    margin-bottom: 1rem;
+    padding: 0.85rem;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    background: rgba(15, 23, 42, 0.7);
+}
+
+.modal[hidden] {
+    display: none;
+}
+
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgba(2, 6, 23, 0.82);
+}
+
+.modal-card {
+    width: min(520px, 100%);
+    border: 1px solid #1e293b;
+    border-radius: 14px;
+    padding: 1.25rem;
+    background: #020617;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
 .muted {
     color: var(--muted);
 }
 
+.lobby-shell {
+    gap: 1.5rem;
+}
+
+.lobby-header {
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    padding: 1.25rem;
+    background: rgba(2, 6, 23, 0.45);
+}
+
+.lobby-status {
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid #334155;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.lobby-status.lobby {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.lobby-status.started {
+    border-color: #22c55e;
+    color: #22c55e;
+}
+
+.lobby-count {
+    margin-bottom: 1rem;
+}
+
+.lobby-player-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.75rem;
+}
+
+.lobby-player {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem;
+    border: 1px solid #1e293b;
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.65);
+}
+
+.lobby-player small {
+    color: var(--accent);
+}
+
+.lobby-details {
+    display: grid;
+    gap: 0.85rem;
+    margin: 0 0 1rem;
+}
+
+.lobby-details div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #1e293b;
+}
+
+.lobby-details dt {
+    color: var(--muted);
+}
+
+.lobby-details dd {
+    margin: 0;
+    color: var(--text);
+    text-align: right;
+}
+
+.lobby-placeholder {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px dashed #334155;
+    border-radius: 10px;
+    color: var(--muted);
+    background: rgba(15, 23, 42, 0.35);
+}
+
+.lobby-placeholder h3 {
+    margin-bottom: 0.5rem;
+    color: var(--text);
+}
+
+.lobby-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
 @media (max-width: 920px) {
-    .play-form {
+    .play-header,
+    .lobby-header {
+        flex-direction: column;
+    }
+
+    .play-grid,
+    .play-grid.two-column {
+        grid-template-columns: 1fr;
+    }
+
+    .tabs,
+    .lobby-actions,
+    .modal-actions {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .play-form input[type="text"],
-    .play-form input[type="number"] {
-        min-width: 0;
+    .play-btn,
+    .play-link,
+    .tab-btn {
         width: 100%;
     }
 }
