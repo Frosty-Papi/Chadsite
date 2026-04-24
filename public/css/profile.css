@@ -293,28 +293,27 @@
     border: 1px solid #1e293b;
     border-radius: 12px;
     background: #0f172a;
-    overflow: visible;
 }
 
 .avatar-cropper img {
     display: block;
     max-width: 100%;
-    max-height: 280px;
 }
 
 .avatar-cropper .cropper-container {
+    width: 300px !important;
+    height: 300px !important;
     max-width: 100% !important;
-    margin-left: auto;
-    margin-right: auto;
-    overflow: hidden;
+    margin: 0 auto;
     border-radius: 10px;
+    background: transparent;
 }
 
 .avatar-cropper .cropper-wrap-box,
 .avatar-cropper .cropper-canvas,
 .avatar-cropper .cropper-drag-box,
-.avatar-cropper .cropper-crop-box {
-    max-width: 100%;
+.avatar-cropper .cropper-container img {
+    overflow: visible !important;
 }
 
 .avatar-cropper .cropper-view-box,
