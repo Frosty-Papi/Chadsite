@@ -63,12 +63,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function buildVisibleViewportCanvas() {
-        if (!cropper) return null;
-        const imageData = cropper.getImageData();
+        if (!cropper || !preview?.complete || !preview.naturalWidth || !preview.naturalHeight) return null;
+
         const canvasData = cropper.getCanvasData();
         const containerData = cropper.getContainerData();
-        const source = imageData.element;
-        if (!source) return null;
 
         const output = document.createElement("canvas");
         output.width = 300;
@@ -77,19 +75,19 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
 
-        const scaleX = imageData.naturalWidth / canvasData.width;
-        const scaleY = imageData.naturalHeight / canvasData.height;
+        const scaleX = preview.naturalWidth / canvasData.width;
+        const scaleY = preview.naturalHeight / canvasData.height;
         const viewportSize = Math.min(containerData.width, containerData.height);
         const viewportLeft = (containerData.width - viewportSize) / 2;
         const viewportTop = (containerData.height - viewportSize) / 2;
 
-        const sourceX = (viewportLeft - canvasData.left) * scaleX;
-        const sourceY = (viewportTop - canvasData.top) * scaleY;
-        const sourceSizeX = viewportSize * scaleX;
-        const sourceSizeY = viewportSize * scaleY;
+        const sourceX = Math.max(0, (viewportLeft - canvasData.left) * scaleX);
+        const sourceY = Math.max(0, (viewportTop - canvasData.top) * scaleY);
+        const sourceSizeX = Math.min(preview.naturalWidth - sourceX, viewportSize * scaleX);
+        const sourceSizeY = Math.min(preview.naturalHeight - sourceY, viewportSize * scaleY);
 
         ctx.drawImage(
-            source,
+            preview,
             sourceX,
             sourceY,
             sourceSizeX,
