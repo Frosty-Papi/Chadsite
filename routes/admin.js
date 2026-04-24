@@ -1,7 +1,6 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const db = require("../db");
-const crypto = require("crypto");
 const { requireAdminAccess, requireSuperAdmin, getUser, canActOnTarget } = require("../middleware/auth");
 const { validatePassword, generateOneTimePassword } = require("../lib/passwords");
 const { deleteAvatarFile } = require("../lib/files");
@@ -20,6 +19,15 @@ function listUsers() {
 
 function listServices() {
   return db.prepare("SELECT * FROM services ORDER BY sort_order, name").all();
+}
+
+function generateCompliantOneTimePassword(username) {
+  for (let i = 0; i < 10; i += 1) {
+    const password = generateOneTimePassword();
+    if (!validatePassword(password, username)) return password;
+  }
+
+  throw new Error("Unable to generate a compliant one-time password");
 }
 
 router.get("/admin", requireAdminAccess, (req, res) => {
@@ -44,9 +52,10 @@ router.post("/admin/user", requireSuperAdmin, (req, res) => {
     return res.status(400).json({ error: "Username is required" });
   }
 
-  const tempPassword = generateOneTimePassword();
-  const passwordError = validatePassword(tempPassword, username);
-  if (passwordError) {
+  let tempPassword;
+  try {
+    tempPassword = generateCompliantOneTimePassword(username);
+  } catch (e) {
     return res.status(500).json({ error: "Generated password did not meet password policy" });
   }
 
@@ -169,7 +178,13 @@ router.post("/admin/user/reset-password", requireAdminAccess, (req, res) => {
     return res.status(403).json({ error: "Forbidden" });
   }
 
-  const temp = generateOneTimePassword();
+  let temp;
+  try {
+    temp = generateCompliantOneTimePassword(target.username);
+  } catch (e) {
+    return res.status(500).json({ error: "Generated password did not meet password policy" });
+  }
+
   const hash = bcrypt.hashSync(temp, 10);
 
   db.prepare(`UPDATE users SET password_hash = ?, must_reset_password = 1, password_reset_token = 1 WHERE id = ?`)
