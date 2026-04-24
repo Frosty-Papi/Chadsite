@@ -40,14 +40,6 @@ function hasColumn(table, column) {
   return rows.some(r => r.name === column);
 }
 
-function normalizeName(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ");
-}
-
 // USERS
 
 db.prepare(`
@@ -222,32 +214,9 @@ CREATE TABLE IF NOT EXISTS play_game_settings (
 )
 `).run();
 
-// CONFIGURATIONS
-
-db.prepare(`
-CREATE TABLE IF NOT EXISTS play_game_configurations (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  game_id INTEGER NOT NULL,
-  owner_user_id INTEGER NOT NULL,
-  name TEXT NOT NULL,
-  description TEXT,
-  layout_json TEXT NOT NULL,
-  is_default_for_owner INTEGER NOT NULL DEFAULT 0,
-  is_public INTEGER NOT NULL DEFAULT 1,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (game_id) REFERENCES play_games(id) ON DELETE CASCADE,
-  FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE CASCADE
-)
-`).run();
-
-db.prepare(`
-CREATE UNIQUE INDEX IF NOT EXISTS idx_play_default_config_per_owner_game
-ON play_game_configurations(game_id, owner_user_id)
-WHERE is_default_for_owner = 1
-`).run();
-
-// LIVE SESSIONS
+// PLAY LOBBIES
+// Existing databases may still have older configuration/state tables and columns. They are intentionally left in place
+// for non-destructive migration, but the application no longer uses them.
 
 db.prepare(`
 CREATE TABLE IF NOT EXISTS play_sessions (
@@ -255,20 +224,23 @@ CREATE TABLE IF NOT EXISTS play_sessions (
   session_key TEXT NOT NULL UNIQUE,
   host_user_id INTEGER NOT NULL,
   game_id INTEGER NOT NULL,
-  configuration_id INTEGER,
   title TEXT NOT NULL,
   visibility TEXT NOT NULL CHECK(visibility IN ('public','private')),
-  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('draft','active','completed','abandoned')),
+  status TEXT NOT NULL DEFAULT 'lobby' CHECK(status IN ('lobby','started','completed','abandoned','draft','active')),
   current_players INTEGER NOT NULL DEFAULT 1,
   max_players INTEGER NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   started_at TEXT,
   ended_at TEXT,
   FOREIGN KEY (host_user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (game_id) REFERENCES play_games(id) ON DELETE RESTRICT,
-  FOREIGN KEY (configuration_id) REFERENCES play_game_configurations(id) ON DELETE SET NULL
+  FOREIGN KEY (game_id) REFERENCES play_games(id) ON DELETE RESTRICT
 )
 `).run();
+
+if (hasColumn("play_sessions", "status")) {
+  db.prepare(`UPDATE play_sessions SET status = 'lobby' WHERE status IN ('active','draft','open')`).run();
+  db.prepare(`UPDATE play_sessions SET status = 'completed' WHERE status = 'closed'`).run();
+}
 
 db.prepare(`
 CREATE TABLE IF NOT EXISTS play_session_members (
@@ -279,15 +251,6 @@ CREATE TABLE IF NOT EXISTS play_session_members (
   PRIMARY KEY (session_id, user_id),
   FOREIGN KEY (session_id) REFERENCES play_sessions(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-)
-`).run();
-
-db.prepare(`
-CREATE TABLE IF NOT EXISTS play_session_state (
-  session_id INTEGER PRIMARY KEY,
-  state_json TEXT NOT NULL DEFAULT '{}',
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (session_id) REFERENCES play_sessions(id) ON DELETE CASCADE
 )
 `).run();
 
