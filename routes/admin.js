@@ -38,24 +38,44 @@ router.get("/admin", requireAdminAccess, (req, res) => {
 
 // CREATE USER (super admin only)
 router.post("/admin/user", requireSuperAdmin, (req, res) => {
-  const { username, password } = req.body;
+  const username = String(req.body.username || "").trim();
 
-  if (!username || !password) {
-    return res.status(400).json({ error: "Missing fields" });
+  if (!username) {
+    return res.status(400).json({ error: "Username is required" });
   }
 
-  const err = validatePassword(password, username);
-  if (err) return res.status(400).json({ error: err });
+  const tempPassword = generateOneTimePassword();
+  const passwordError = validatePassword(tempPassword, username);
+  if (passwordError) {
+    return res.status(500).json({ error: "Generated password did not meet password policy" });
+  }
 
-  const hash = bcrypt.hashSync(password, 10);
+  const hash = bcrypt.hashSync(tempPassword, 10);
 
   try {
-    const result = db.prepare(`INSERT INTO users (username, password_hash) VALUES (?, ?)`)
-      .run(username, hash);
+    const result = db.prepare(`
+      INSERT INTO users (
+        username,
+        password_hash,
+        must_reset_password,
+        password_reset_token
+      )
+      VALUES (?, ?, 1, 1)
+    `).run(username, hash);
 
-    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(result.lastInsertRowid);
+    const user = db.prepare(`
+      SELECT id, username, display_name, role, avatar,
+             is_disabled, disabled_until, must_reset_password
+      FROM users
+      WHERE id = ?
+    `).get(result.lastInsertRowid);
 
-    res.json({ success: true, user });
+    res.json({
+      success: true,
+      user,
+      password: tempPassword,
+      message: "User created. Share this one-time password now; it will not be shown again."
+    });
   } catch (e) {
     res.status(400).json({ error: "User already exists" });
   }
