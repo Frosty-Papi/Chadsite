@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const saveBtn = document.getElementById("saveAvatar");
     const cancelBtn = document.getElementById("cancelAvatar");
     const status = document.getElementById("avatarStatus");
-    const avatarBox = document.querySelector(".avatar");
+    const avatarBox = document.querySelector(".profile-card .avatar");
 
     function resetCropper() {
         if (cropper) cropper.destroy();
@@ -25,16 +25,26 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function updateAvatarImage(src) {
-        if (!avatarBox || !src) return;
-        let img = avatarBox.querySelector("img");
+    function replaceAvatar(containerEl, src, imgClass) {
+        if (!containerEl || !src) return;
+
+        const freshSrc = `${src}?t=${Date.now()}`;
+        let img = containerEl.querySelector("img");
+
         if (!img) {
-            avatarBox.innerHTML = "";
+            containerEl.querySelector(".fallback, .profile-icon")?.remove();
             img = document.createElement("img");
             img.alt = "Profile avatar";
-            avatarBox.appendChild(img);
+            if (imgClass) img.className = imgClass;
+            containerEl.prepend(img);
         }
-        img.src = `${src}?t=${Date.now()}`;
+
+        img.src = freshSrc;
+    }
+
+    function updateAvatarImage(src) {
+        replaceAvatar(avatarBox, src, "");
+        replaceAvatar(document.querySelector(".profile-trigger"), src, "avatar-img");
     }
 
     input?.addEventListener("change", e => {
