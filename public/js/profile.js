@@ -1,157 +1,104 @@
 document.addEventListener("DOMContentLoaded", () => {
-    let cropper = null;
-
-    function getCSRF() {
-        return document.querySelector('meta[name="csrf-token"]')?.content || "";
-    }
-
-    async function api(url, body) {
-        const res = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "CSRF-Token": getCSRF()
-            },
-            body: JSON.stringify(body)
-        });
-
-        const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-            throw new Error(data.error || "Request failed");
-        }
-
-        return data;
-    }
+    let img = new Image();
+    let scale = 1;
+    let offsetX = 0;
+    let offsetY = 0;
 
     const input = document.getElementById("avatarInput");
-    const preview = document.getElementById("preview");
-    const cropSaveBtn = document.getElementById("crop-save-btn");
-    const passwordForm = document.getElementById("password-form");
-    const friendForm = document.getElementById("friend-request-form");
-    const incomingRequestList = document.getElementById("incoming-request-list");
+    const canvas = document.getElementById("avatarCanvas");
+    const ctx = canvas?.getContext("2d");
+    const cropper = document.getElementById("avatarCropper");
+    const zoom = document.getElementById("zoomSlider");
+    const saveBtn = document.getElementById("saveAvatar");
+    const cancelBtn = document.getElementById("cancelAvatar");
+    const status = document.getElementById("avatarStatus");
 
-    if (input && preview) {
-        input.addEventListener("change", (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+    function draw() {
+        if (!ctx) return;
+        ctx.clearRect(0, 0, 300, 300);
 
-            const reader = new FileReader();
+        const w = img.width * scale;
+        const h = img.height * scale;
 
-            reader.onload = (evt) => {
-                preview.src = evt.target.result;
-                preview.style.display = "block";
-
-                if (cropper) {
-                    cropper.destroy();
-                    cropper = null;
-                }
-
-                preview.onload = () => {
-                    if (typeof Cropper === "undefined") return;
-                    cropper = new Cropper(preview, {
-                        aspectRatio: 1,
-                        viewMode: 1
-                    });
-                };
-            };
-
-            reader.readAsDataURL(file);
-        });
+        ctx.drawImage(img, (300 - w) / 2 + offsetX, (300 - h) / 2 + offsetY, w, h);
     }
 
-    if (cropSaveBtn) {
-        cropSaveBtn.addEventListener("click", async () => {
-            if (!cropper) {
-                alert("Please select and crop an image first.");
+    input?.addEventListener("change", e => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = ev => {
+            img.onload = () => {
+                scale = Math.max(300 / img.width, 300 / img.height);
+                offsetX = 0;
+                offsetY = 0;
+                cropper.classList.remove("hidden");
+                draw();
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    zoom?.addEventListener("input", () => {
+        scale = parseFloat(zoom.value);
+        draw();
+    });
+
+    canvas?.addEventListener("mousedown", e => {
+        let startX = e.clientX;
+        let startY = e.clientY;
+
+        function move(ev) {
+            offsetX += ev.clientX - startX;
+            offsetY += ev.clientY - startY;
+            startX = ev.clientX;
+            startY = ev.clientY;
+            draw();
+        }
+
+        function up() {
+            window.removeEventListener("mousemove", move);
+            window.removeEventListener("mouseup", up);
+        }
+
+        window.addEventListener("mousemove", move);
+        window.addEventListener("mouseup", up);
+    });
+
+    cancelBtn?.addEventListener("click", () => {
+        cropper.classList.add("hidden");
+        input.value = "";
+    });
+
+    saveBtn?.addEventListener("click", async () => {
+        status.textContent = "Uploading...";
+
+        canvas.toBlob(async blob => {
+            const formData = new FormData();
+            formData.append("avatar", blob, "avatar.png");
+
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+            formData.append("_csrf", csrf);
+
+            const res = await fetch("/profile/update", {
+                method: "POST",
+                headers: { "CSRF-Token": csrf, "Accept": "application/json" },
+                body: formData
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                status.textContent = data.error || "Upload failed";
                 return;
             }
 
-            const canvas = cropper.getCroppedCanvas({ width: 300, height: 300 });
+            document.querySelector(".avatar img").src = data.avatar + "?t=" + Date.now();
 
-            canvas.toBlob(async (blob) => {
-                const formData = new FormData();
-                formData.append("avatar", blob, "avatar.png");
-
-                const csrf = document.querySelector('input[name="_csrf"]').value;
-                formData.append("_csrf", csrf);
-
-                const res = await fetch("/profile/update", {
-                    method: "POST",
-                    headers: {
-                        "CSRF-Token": csrf
-                    },
-                    body: formData
-                });
-
-                if (!res.ok) {
-                    alert("Upload failed");
-                    return;
-                }
-
-                location.reload();
-            }, "image/png");
-        });
-    }
-
-    if (passwordForm) {
-        passwordForm.addEventListener("submit", (e) => {
-            const newPass = passwordForm.querySelector("input[name='new']").value;
-            const confirm = passwordForm.querySelector("input[name='confirm']").value;
-
-            if (newPass !== confirm) {
-                e.preventDefault();
-                alert("Passwords do not match");
-            }
-        });
-    }
-
-    if (friendForm) {
-        friendForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-
-            const data = Object.fromEntries(new FormData(friendForm));
-
-            try {
-                await api("/api/profile/friends/request", data);
-                location.reload();
-            } catch (err) {
-                alert(err.message);
-            }
-        });
-    }
-
-    if (incomingRequestList) {
-        incomingRequestList.addEventListener("click", async (e) => {
-            const item = e.target.closest(".request-item");
-            if (!item) return;
-
-            const requestId = Number(item.dataset.requestId);
-            if (!Number.isInteger(requestId)) return;
-
-            try {
-                if (e.target.closest(".accept-request-btn")) {
-                    await api("/api/profile/friends/respond", { requestId, action: "accept" });
-                    location.reload();
-                }
-
-                if (e.target.closest(".reject-request-btn")) {
-                    await api("/api/profile/friends/respond", { requestId, action: "reject" });
-                    location.reload();
-                }
-            } catch (err) {
-                alert(err.message);
-            }
-        });
-    }
-
-    document.querySelectorAll(".friends-tab-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-            document.querySelectorAll(".friends-tab-btn").forEach((el) => el.classList.remove("active"));
-            document.querySelectorAll(".friends-tab-panel").forEach((el) => el.classList.remove("active"));
-
-            btn.classList.add("active");
-            document.getElementById(`friends-tab-${btn.dataset.friendsTab}`)?.classList.add("active");
-        });
+            status.textContent = "Saved!";
+            cropper.classList.add("hidden");
+        }, "image/png");
     });
 });
