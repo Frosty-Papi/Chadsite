@@ -324,3 +324,37 @@
     color: #94a3b8;
     font-size: 0.85rem;
 }
+
+/* --- TRUE CIRCULAR MASK OVERLAY --- */
+.avatar-cropper {
+    position: relative;
+}
+
+.avatar-cropper::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    /* dark overlay with circular cutout */
+    background: radial-gradient(
+        circle at center,
+        transparent 42%,
+        rgba(2, 6, 23, 0.85) 43%
+    );
+}
+
+/* optional subtle border ring */
+.avatar-cropper::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    background: radial-gradient(
+        circle at center,
+        transparent 40%,
+        rgba(255,255,255,0.15) 41%,
+                                transparent 42%
+    );
+}
