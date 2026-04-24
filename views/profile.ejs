@@ -1,6 +1,4 @@
 <link rel="stylesheet" href="/css/profile.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
 
 <h2>My Profile</h2>
 
@@ -30,15 +28,23 @@
         <button type="submit">Save</button>
       </form>
 
-      <form method="POST" action="/profile/update" enctype="multipart/form-data" class="stack-form avatar-form">
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-
+      <div class="stack-form avatar-form avatar-upload">
         <label>Profile Picture</label>
-        <input type="file" id="avatarInput" name="avatar" accept="image/*">
-        <img id="preview" class="preview-hidden" />
+        <input type="file" id="avatarInput" accept="image/*">
 
-        <button type="button" id="crop-save-btn">Crop & Save</button>
-      </form>
+        <div id="avatarCropper" class="avatar-cropper hidden">
+          <canvas id="avatarCanvas" width="300" height="300"></canvas>
+          <div class="avatar-controls">
+            <label for="zoomSlider">Zoom</label>
+            <input type="range" id="zoomSlider" min="1" max="3" step="0.01" value="1">
+          </div>
+          <div class="avatar-actions">
+            <button type="button" id="saveAvatar">Save Avatar</button>
+            <button type="button" id="cancelAvatar" class="secondary">Cancel</button>
+          </div>
+          <div id="avatarStatus" class="avatar-status"></div>
+        </div>
+      </div>
     </div>
 
   <section class="profile-panel friends-panel">
