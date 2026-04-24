@@ -1,4 +1,5 @@
 <link rel="stylesheet" href="/css/profile.css">
+<link rel="stylesheet" href="/vendor/cropperjs/cropper.min.css">
 
 <h2>My Profile</h2>
 
@@ -25,7 +26,7 @@
         <label>Display Name</label>
         <input name="display_name" value="<%= user.display_name || '' %>" />
 
-        <button type="submit">Save</button>
+        <button type="submit">Save Display Name</button>
       </form>
 
       <div class="stack-form avatar-form avatar-upload">
@@ -33,11 +34,7 @@
         <input type="file" id="avatarInput" accept="image/*">
 
         <div id="avatarCropper" class="avatar-cropper hidden">
-          <canvas id="avatarCanvas" width="300" height="300"></canvas>
-          <div class="avatar-controls">
-            <label for="zoomSlider">Zoom</label>
-            <input type="range" id="zoomSlider" min="1" max="3" step="0.01" value="1">
-          </div>
+          <img id="avatarPreview" alt="Avatar preview">
           <div class="avatar-actions">
             <button type="button" id="saveAvatar">Save Avatar</button>
             <button type="button" id="cancelAvatar" class="secondary">Cancel</button>
@@ -139,4 +136,5 @@
   </form>
 </div>
 
+<script src="/vendor/cropperjs/cropper.min.js"></script>
 <script src="/js/profile.js"></script>
