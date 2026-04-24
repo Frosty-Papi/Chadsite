@@ -3,3 +3,28 @@ table{width:100%;border-collapse:collapse}
 th,td{padding:8px;border-bottom:1px solid #1e293b}
 .actions-cell button{margin-right:4px}
 .service-row{display:flex;justify-content:space-between;margin-bottom:6px}
+
+.otp-panel {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    background: #0f172a;
+}
+
+.otp-header {
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.otp-value {
+    font-family: monospace;
+    font-size: 16px;
+    margin-bottom: 8px;
+    color: #22c55e;
+}
+
+.otp-warning {
+    font-size: 12px;
+    color: #f87171;
+}
