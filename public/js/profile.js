@@ -45,18 +45,6 @@ document.addEventListener("DOMContentLoaded", () => {
         replaceAvatar(document.querySelector(".profile-trigger"), src, "avatar-img");
     }
 
-    function lockCropBoxToViewport() {
-        if (!cropper) return;
-        const data = cropper.getContainerData();
-        const size = Math.min(data.width, data.height, STAGE_SIZE);
-        cropper.setCropBoxData({
-            left: (data.width - size) / 2,
-            top: (data.height - size) / 2,
-            width: size,
-            height: size
-        });
-    }
-
     function coverViewport() {
         if (!cropper) return;
         const containerData = cropper.getContainerData();
@@ -64,15 +52,36 @@ document.addEventListener("DOMContentLoaded", () => {
         const targetWidth = containerData.width || STAGE_SIZE;
         const targetHeight = containerData.height || STAGE_SIZE;
         const scale = Math.max(targetWidth / imageData.naturalWidth, targetHeight / imageData.naturalHeight);
-        const width = imageData.naturalWidth * scale;
-        const height = imageData.naturalHeight * scale;
         cropper.setCanvasData({
-            left: (targetWidth - width) / 2,
-            top: (targetHeight - height) / 2,
-            width,
-            height
+            left: (targetWidth - imageData.naturalWidth * scale) / 2,
+            top: (targetHeight - imageData.naturalHeight * scale) / 2,
+            width: imageData.naturalWidth * scale,
+            height: imageData.naturalHeight * scale
         });
-        lockCropBoxToViewport();
+    }
+
+    function buildViewportCanvas() {
+        if (!cropper || !preview.complete || !preview.naturalWidth || !preview.naturalHeight) return null;
+        const canvasData = cropper.getCanvasData();
+        const containerData = cropper.getContainerData();
+        const viewportSize = Math.min(containerData.width, containerData.height);
+        const viewportLeft = (containerData.width - viewportSize) / 2;
+        const viewportTop = (containerData.height - viewportSize) / 2;
+        const scale = 300 / viewportSize;
+        const output = document.createElement("canvas");
+        output.width = 300;
+        output.height = 300;
+        const ctx = output.getContext("2d");
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(
+            preview,
+            (canvasData.left - viewportLeft) * scale,
+            (canvasData.top - viewportTop) * scale,
+            canvasData.width * scale,
+            canvasData.height * scale
+        );
+        return output;
     }
 
     input?.addEventListener("change", e => {
@@ -93,19 +102,15 @@ document.addEventListener("DOMContentLoaded", () => {
             if (status) status.textContent = "Drag to position. Pinch or wheel to zoom.";
 
             cropper = new Cropper(preview, {
-                aspectRatio: 1,
                 viewMode: 1,
                 dragMode: "move",
-                autoCrop: true,
-                autoCropArea: 1,
+                autoCrop: false,
                 background: false,
                 responsive: true,
                 restore: false,
                 guides: false,
                 center: false,
                 highlight: false,
-                cropBoxMovable: false,
-                cropBoxResizable: false,
                 toggleDragModeOnDblclick: false,
                 movable: true,
                 zoomable: true,
@@ -115,18 +120,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 minContainerWidth: STAGE_SIZE,
                 minContainerHeight: STAGE_SIZE,
                 ready() {
-                    window.requestAnimationFrame(() => {
-                        coverViewport();
-                        lockCropBoxToViewport();
-                    });
-                    setTimeout(lockCropBoxToViewport, 75);
+                    window.requestAnimationFrame(coverViewport);
                     this.cropper.classList.add("avatar-cropper-ready");
-                },
-                crop() {
-                    lockCropBoxToViewport();
-                },
-                zoom() {
-                    window.requestAnimationFrame(lockCropBoxToViewport);
                 }
             });
         };
@@ -145,15 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
         saveBtn.disabled = true;
         saveBtn.textContent = "Saving...";
 
-        lockCropBoxToViewport();
-
-        const canvas = cropper.getCroppedCanvas({
-            width: 300,
-            height: 300,
-            imageSmoothingEnabled: true,
-            imageSmoothingQuality: "high"
-        });
-
+        const canvas = buildViewportCanvas();
         if (!canvas) {
             status.textContent = "Could not prepare image.";
             saveBtn.disabled = false;
