@@ -1,38 +1,72 @@
 <link rel="stylesheet" href="/css/play.css">
 
-<section class="play-shell" id="play-session-root"
-  data-session-id="<%= session.id %>"
-  data-state="<%- stateJson.replace(/&/g, '&amp;').replace(/"/g, '&quot;') %>"
-  data-is-host="<%= session.host_user_id === currentUser.id %>">
-  <div class="play-header">
+<section class="play-shell lobby-shell">
+  <div class="play-header lobby-header">
     <div>
       <h1><%= session.title %></h1>
-      <p><%= session.game_title %></p>
+      <p>
+        <a class="play-link inline" href="<%= session.bgg_url %>" target="_blank" rel="noopener noreferrer">View on BoardGameGeek</a>
+      </p>
     </div>
-    <div class="session-meta">
-      <span><%= members.length %>/<%= session.max_players %> players</span>
+    <div class="lobby-status <%= session.status %>">
+      <%= session.status === 'started' ? 'Started' : 'Lobby' %>
     </div>
   </div>
 
-  <div class="play-grid two-column">
+  <div class="play-grid two-column lobby-grid">
     <section class="play-panel">
-      <h2>Board</h2>
-      <div id="session-board" class="layout-builder"></div>
+      <h2>Players</h2>
+      <p class="muted lobby-count"><%= members.length %>/<%= session.max_players %> joined</p>
+
+      <ul class="lobby-player-list">
+        <% members.forEach(member => { %>
+          <li class="lobby-player">
+            <span><%= member.display_name || member.username %></span>
+            <small><%= member.role === 'host' ? 'Host' : 'Player' %></small>
+          </li>
+        <% }) %>
+      </ul>
     </section>
 
     <aside class="play-panel">
-      <h2>Players</h2>
-      <ul class="player-list">
-        <% members.forEach(m => { %>
-          <li><strong><%= m.display_name || m.username %></strong> (<%= m.role %>)</li>
-        <% }) %>
-      </ul>
+      <h2>Lobby Details</h2>
+      <dl class="lobby-details">
+        <div>
+          <dt>Host</dt>
+          <dd><%= session.display_name || session.username %></dd>
+        </div>
+        <div>
+          <dt>Visibility</dt>
+          <dd><%= session.visibility === 'private' ? 'Private friends lobby' : 'Public lobby' %></dd>
+        </div>
+        <div>
+          <dt>Status</dt>
+          <dd><%= session.status %></dd>
+        </div>
+      </dl>
+
+      <% if (session.status === 'started') { %>
+        <div class="lobby-placeholder">
+          <h3>Gameplay Placeholder</h3>
+          <p>The host has started the session. Gameplay features will be added later.</p>
+        </div>
+      <% } else { %>
+        <div class="lobby-placeholder">
+          <h3>Waiting for Host</h3>
+          <p>Players can gather here until the host starts the session.</p>
+        </div>
+      <% } %>
 
       <% if (session.host_user_id === currentUser.id) { %>
-        <button id="terminate-btn" class="play-btn danger">End Session</button>
+        <div class="lobby-actions" data-session-id="<%= session.id %>">
+          <% if (session.status === 'lobby') { %>
+            <button type="button" class="play-btn" id="start-lobby-btn">Start Session</button>
+          <% } %>
+          <button type="button" class="play-btn secondary" id="close-lobby-btn">Close Lobby</button>
+        </div>
       <% } %>
     </aside>
   </div>
 </section>
 
-<script src="/js/play-session.js"></script>
+<script src="/js/play-lobby.js"></script>
