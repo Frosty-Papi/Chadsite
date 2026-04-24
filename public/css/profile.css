@@ -293,7 +293,7 @@
     border: 1px solid #1e293b;
     border-radius: 12px;
     background: #0f172a;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .avatar-cropper img {
@@ -304,6 +304,17 @@
 
 .avatar-cropper .cropper-container {
     max-width: 100% !important;
+    margin-left: auto;
+    margin-right: auto;
+    overflow: hidden;
+    border-radius: 10px;
+}
+
+.avatar-cropper .cropper-wrap-box,
+.avatar-cropper .cropper-canvas,
+.avatar-cropper .cropper-drag-box,
+.avatar-cropper .cropper-crop-box {
+    max-width: 100%;
 }
 
 .avatar-cropper .cropper-view-box,
@@ -312,8 +323,8 @@
 }
 
 .avatar-cropper .cropper-view-box {
-    outline: 2px solid rgba(255,255,255,0.85);
-    outline-color: rgba(255,255,255,0.85);
+    outline: 2px solid rgba(255,255,255,0.9);
+    outline-color: rgba(255,255,255,0.9);
     box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.72);
 }
 
@@ -327,10 +338,12 @@
 }
 
 .avatar-cropper .cropper-modal {
-    opacity: 0.15;
+    opacity: 0;
 }
 
 .avatar-actions {
+    position: relative;
+    z-index: 5;
     display: flex;
     gap: 0.75rem;
     margin-top: 0.85rem;
@@ -343,6 +356,8 @@
 }
 
 .avatar-status {
+    position: relative;
+    z-index: 5;
     min-height: 1.25rem;
     margin-top: 0.65rem;
     color: #94a3b8;
