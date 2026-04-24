@@ -109,12 +109,12 @@
     flex-wrap: wrap;
 }
 
-.tab-content {
-    display: none;
+.tables-panel > .tab-content {
+    display: none !important;
 }
 
-.tab-content.active {
-    display: block;
+.tables-panel > .tab-content.active {
+    display: block !important;
 }
 
 .play-table {
