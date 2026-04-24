@@ -63,6 +63,27 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    function coverCropStage() {
+        if (!cropper) return;
+
+        const containerData = cropper.getContainerData();
+        const imageData = cropper.getImageData();
+        const targetWidth = containerData.width || STAGE_SIZE;
+        const targetHeight = containerData.height || STAGE_SIZE;
+        const scale = Math.max(targetWidth / imageData.naturalWidth, targetHeight / imageData.naturalHeight);
+        const width = imageData.naturalWidth * scale;
+        const height = imageData.naturalHeight * scale;
+
+        cropper.setCanvasData({
+            left: (targetWidth - width) / 2,
+            top: (targetHeight - height) / 2,
+            width,
+            height
+        });
+
+        centerLockedCropBox();
+    }
+
     input?.addEventListener("change", e => {
         const file = e.target.files[0];
         if (!file) return;
@@ -105,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 minContainerWidth: STAGE_SIZE,
                 minContainerHeight: STAGE_SIZE,
                 ready() {
-                    centerLockedCropBox();
+                    window.requestAnimationFrame(coverCropStage);
                     this.cropper.classList.add("avatar-cropper-ready");
                 },
                 cropmove() {
