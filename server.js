@@ -22,6 +22,9 @@ app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
+// Serve CropperJS locally
+app.use("/vendor/cropperjs", express.static(path.join(__dirname, "node_modules", "cropperjs", "dist")));
+
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
 
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
