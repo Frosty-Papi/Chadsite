@@ -82,6 +82,18 @@ document.addEventListener("DOMContentLoaded", () => {
         lockCropToViewport();
     }
 
+    function syncVisibleCropBeforeSave() {
+        if (!cropper) return;
+        const data = cropper.getContainerData();
+
+        cropper.setCropBoxData({
+            width: data.width,
+            height: data.height,
+            left: 0,
+            top: 0
+        });
+    }
+
     input?.addEventListener("change", e => {
         const file = e.target.files[0];
         if (!file) return;
@@ -150,6 +162,8 @@ document.addEventListener("DOMContentLoaded", () => {
         status.textContent = "Uploading...";
         saveBtn.disabled = true;
         saveBtn.textContent = "Saving...";
+
+        syncVisibleCropBeforeSave();
 
         const canvas = cropper.getCroppedCanvas({
             width: 300,
