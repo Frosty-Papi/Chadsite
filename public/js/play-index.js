@@ -96,11 +96,32 @@ document.querySelectorAll(".tab-btn").forEach((button) => {
   });
 });
 
-document.getElementById("host-game-form")?.addEventListener("submit", (e) => {
+document.getElementById("host-game-form")?.addEventListener("submit", async (e) => {
   e.preventDefault();
+
   if (!selectedGame) return alert("Select a game");
+
   const vis = document.getElementById("host-visibility")?.value || "public";
-  location.href = `/play/setup/${selectedGame}?visibility=${encodeURIComponent(vis)}`;
+
+  const res = await fetch("/api/play/sessions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "CSRF-Token": getCSRFToken(),
+      Accept: "application/json"
+    },
+    body: JSON.stringify({ gameId: selectedGame, visibility: vis })
+  });
+
+  const data = await parseJsonSafely(res);
+
+  if (!res.ok) {
+    alert(data.error || "Failed to create lobby");
+    if (data.redirectUrl) location.href = data.redirectUrl;
+    return;
+  }
+
+  if (data.redirectUrl) location.href = data.redirectUrl;
 });
 
 document.getElementById("new-game-form")?.addEventListener("submit", async (e) => {
@@ -128,5 +149,10 @@ document.getElementById("new-game-form")?.addEventListener("submit", async (e) =
     return;
   }
 
-  if (data.redirectUrl) location.href = data.redirectUrl;
+  if (data.gameId) {
+    setSelectedGame(data.gameId, form.bggUrl.value);
+  }
+
+  const modal = document.getElementById("new-game-modal");
+  if (modal) modal.hidden = true;
 });
