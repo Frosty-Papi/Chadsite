@@ -281,3 +281,46 @@
     font-size: 1rem;
     word-break: break-word;
 }
+
+.hidden {
+    display: none !important;
+}
+
+.avatar-cropper {
+    max-width: 340px;
+    width: 100%;
+    padding: 0.85rem;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    background: #0f172a;
+    overflow: hidden;
+}
+
+.avatar-cropper img {
+    display: block;
+    max-width: 100%;
+    max-height: 280px;
+}
+
+.avatar-cropper .cropper-container {
+    max-width: 100% !important;
+}
+
+.avatar-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.avatar-actions .secondary {
+    border-color: #475569;
+    color: #94a3b8;
+}
+
+.avatar-status {
+    min-height: 1.25rem;
+    margin-top: 0.65rem;
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
