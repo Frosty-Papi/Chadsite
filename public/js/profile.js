@@ -28,10 +28,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function replaceAvatar(containerEl, src, imgClass) {
         if (!containerEl || !src) return;
-
         const freshSrc = `${src}?t=${Date.now()}`;
         let img = containerEl.querySelector("img");
-
         if (!img) {
             containerEl.querySelector(".fallback, .profile-icon")?.remove();
             img = document.createElement("img");
@@ -39,7 +37,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (imgClass) img.className = imgClass;
             containerEl.prepend(img);
         }
-
         img.src = freshSrc;
     }
 
@@ -48,22 +45,8 @@ document.addEventListener("DOMContentLoaded", () => {
         replaceAvatar(document.querySelector(".profile-trigger"), src, "avatar-img");
     }
 
-    function lockCropToViewport() {
-        if (!cropper) return;
-        const data = cropper.getContainerData();
-        const size = Math.min(data.width, data.height, STAGE_SIZE);
-
-        cropper.setCropBoxData({
-            width: size,
-            height: size,
-            left: (data.width - size) / 2,
-            top: (data.height - size) / 2
-        });
-    }
-
     function coverViewport() {
         if (!cropper) return;
-
         const containerData = cropper.getContainerData();
         const imageData = cropper.getImageData();
         const targetWidth = containerData.width || STAGE_SIZE;
@@ -71,33 +54,58 @@ document.addEventListener("DOMContentLoaded", () => {
         const scale = Math.max(targetWidth / imageData.naturalWidth, targetHeight / imageData.naturalHeight);
         const width = imageData.naturalWidth * scale;
         const height = imageData.naturalHeight * scale;
-
         cropper.setCanvasData({
             left: (targetWidth - width) / 2,
             top: (targetHeight - height) / 2,
             width,
             height
         });
-
-        lockCropToViewport();
     }
 
-    function syncVisibleCropBeforeSave() {
-        if (!cropper) return;
-        const data = cropper.getContainerData();
+    function buildVisibleViewportCanvas() {
+        if (!cropper) return null;
+        const imageData = cropper.getImageData();
+        const canvasData = cropper.getCanvasData();
+        const containerData = cropper.getContainerData();
+        const source = imageData.element;
+        if (!source) return null;
 
-        cropper.setCropBoxData({
-            width: data.width,
-            height: data.height,
-            left: 0,
-            top: 0
-        });
+        const output = document.createElement("canvas");
+        output.width = 300;
+        output.height = 300;
+        const ctx = output.getContext("2d");
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+
+        const scaleX = imageData.naturalWidth / canvasData.width;
+        const scaleY = imageData.naturalHeight / canvasData.height;
+        const viewportSize = Math.min(containerData.width, containerData.height);
+        const viewportLeft = (containerData.width - viewportSize) / 2;
+        const viewportTop = (containerData.height - viewportSize) / 2;
+
+        const sourceX = (viewportLeft - canvasData.left) * scaleX;
+        const sourceY = (viewportTop - canvasData.top) * scaleY;
+        const sourceSizeX = viewportSize * scaleX;
+        const sourceSizeY = viewportSize * scaleY;
+
+        ctx.drawImage(
+            source,
+            sourceX,
+            sourceY,
+            sourceSizeX,
+            sourceSizeY,
+            0,
+            0,
+            300,
+            300
+        );
+
+        return output;
     }
 
     input?.addEventListener("change", e => {
         const file = e.target.files[0];
         if (!file) return;
-
         if (!file.type.startsWith("image/")) {
             alert("Please choose an image file.");
             input.value = "";
@@ -107,7 +115,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const reader = new FileReader();
         reader.onload = evt => {
             if (cropper) cropper.destroy();
-
             preview.src = evt.target.result;
             preview.style.display = "block";
             container.classList.remove("hidden");
@@ -117,16 +124,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 aspectRatio: 1,
                 viewMode: 1,
                 dragMode: "move",
-                autoCrop: true,
-                autoCropArea: 1,
+                autoCrop: false,
                 background: false,
                 responsive: true,
                 restore: false,
                 guides: false,
                 center: false,
                 highlight: false,
-                cropBoxMovable: false,
-                cropBoxResizable: false,
                 toggleDragModeOnDblclick: false,
                 movable: true,
                 zoomable: true,
@@ -138,16 +142,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 ready() {
                     window.requestAnimationFrame(coverViewport);
                     this.cropper.classList.add("avatar-cropper-ready");
-                },
-                cropmove() {
-                    lockCropToViewport();
-                },
-                zoom() {
-                    window.requestAnimationFrame(lockCropToViewport);
                 }
             });
         };
-
         reader.readAsDataURL(file);
     });
 
@@ -163,14 +160,13 @@ document.addEventListener("DOMContentLoaded", () => {
         saveBtn.disabled = true;
         saveBtn.textContent = "Saving...";
 
-        syncVisibleCropBeforeSave();
-
-        const canvas = cropper.getCroppedCanvas({
-            width: 300,
-            height: 300,
-            imageSmoothingEnabled: true,
-            imageSmoothingQuality: "high"
-        });
+        const canvas = buildVisibleViewportCanvas();
+        if (!canvas) {
+            status.textContent = "Could not prepare image.";
+            saveBtn.disabled = false;
+            saveBtn.textContent = "Save Avatar";
+            return;
+        }
 
         canvas.toBlob(async blob => {
             if (!blob) {
@@ -179,13 +175,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 saveBtn.textContent = "Save Avatar";
                 return;
             }
-
             try {
                 const formData = new FormData();
                 formData.append("avatar", blob, "avatar.png");
-
                 const csrf = document.querySelector('meta[name="csrf-token"]')?.content || "";
-
                 const res = await fetch("/profile/update", {
                     method: "POST",
                     headers: {
@@ -194,16 +187,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     },
                     body: formData
                 });
-
                 const data = await res.json().catch(() => ({}));
-
                 if (!res.ok) {
                     status.textContent = data.error || "Upload failed";
                     saveBtn.disabled = false;
                     saveBtn.textContent = "Save Avatar";
                     return;
                 }
-
                 updateAvatarImage(data.avatar);
                 status.textContent = "Saved!";
                 setTimeout(resetCropper, 350);
