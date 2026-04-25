@@ -211,13 +211,21 @@ router.post("/admin/user/force-reset", requireAdminAccess, (req, res) => {
 
 // SERVICES (super admin only)
 router.post("/admin/service", requireSuperAdmin, (req, res) => {
-  const { name, path, icon, is_external, min_role } = req.body;
+  const { name, path, icon, min_role } = req.body;
+  let isExternal = false;
+
+  try {
+    const url = new URL(path);
+    isExternal = url.protocol === "http:" || url.protocol === "https:";
+  } catch {}
+
+  const is_external = isExternal ? 1 : 0;
 
   if (!name || !path) {
     return res.status(400).json({ error: "Missing fields" });
   }
 
-  if (!/^\/[a-z0-9/_-]*$/i.test(path)) {
+  if (!is_external && !/^\/[a-z0-9/_-]*$/i.test(path)) {
     return res.status(400).json({ error: "Invalid service path" });
   }
 
