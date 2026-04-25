@@ -29,8 +29,8 @@ function requirePlayAccess(req, res, next) {
 function getFriendsForUser(userId) {
   return db.prepare(`
     SELECT u.id, u.username, u.display_name, u.avatar
-    FROM friendships f
-    JOIN users u ON u.id = f.friend_user_id
+    FROM friends f
+    JOIN users u ON u.id = f.friend_id
     WHERE f.user_id = ?
     ORDER BY COALESCE(u.display_name, u.username) COLLATE NOCASE
   `).all(userId);
@@ -59,7 +59,7 @@ function getPrivateFriendLobbies(userId) {
     FROM play_sessions s
     JOIN users u ON u.id = s.host_user_id
     JOIN play_games g ON g.id = s.game_id
-    JOIN friendships f ON f.friend_user_id = s.host_user_id
+    JOIN friends f ON f.friend_id = s.host_user_id
     WHERE s.status = 'lobby'
       AND s.visibility = 'private'
       AND f.user_id = ?
@@ -67,7 +67,7 @@ function getPrivateFriendLobbies(userId) {
   `).all(userId);
 }
 
-function getUserOpenLobbyOrStartedSession(userId) {
+function getUserOpenLobbyOrActiveSession(userId) {
   return db.prepare(`
     SELECT s.*
     FROM play_sessions s
@@ -105,7 +105,7 @@ function userCanViewLobby(userId, session) {
   if (alreadyMember) return true;
 
   const isFriend = db.prepare(`
-    SELECT 1 FROM friendships WHERE user_id = ? AND friend_user_id = ?
+    SELECT 1 FROM friends WHERE user_id = ? AND friend_id = ?
   `).get(userId, session.host_user_id);
 
   return !!isFriend;
@@ -113,7 +113,7 @@ function userCanViewLobby(userId, session) {
 
 router.get("/play", requireLogin, requirePlayAccess, (req, res) => {
   const user = getUser(req);
-  const existing = getUserOpenLobbyOrStartedSession(user.id);
+  const existing = getUserOpenLobbyOrActiveSession(user.id);
   if (existing) return res.redirect(`/play/session/${existing.session_key}`);
 
   res.render("play/index", {
@@ -197,7 +197,7 @@ router.post("/api/play/sessions", requireLogin, requirePlayAccess, (req, res) =>
     return res.status(400).json({ error: "Game is required" });
   }
 
-  const existing = getUserOpenLobbyOrStartedSession(user.id);
+  const existing = getUserOpenLobbyOrActiveSession(user.id);
   if (existing) {
     return res.status(409).json({
       error: "You are already in an open lobby",
