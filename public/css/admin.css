@@ -167,3 +167,21 @@ z-index: 9999;
 .toast.error {
     background: #dc2626;
 }
+
+.admin-live-status {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.admin-live-status[data-state="live"] {
+    color: #4caf50;
+}
+
+.admin-live-status[data-state="reconnecting"] {
+    color: #f44336;
+}
+
+.admin-live-status[data-state="offline"] {
+    color: #888;
+}

@@ -7,6 +7,67 @@
         activeTab: "users",
         editingServiceId: null,
         search: ""
+// =====================
+// CSRF + API
+// =====================
+function getCSRF() {
+    return document.querySelector('meta[name="csrf-token"]')?.content || "";
+}
+
+async function api(url, body) {
+    const res = await fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "CSRF-Token": getCSRF()
+        },
+        body: JSON.stringify(body)
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+        console.error("API ERROR:", url, data);
+        showToast(data.error || "Request failed", "error");
+        throw new Error(data.error || "Request failed");
+    }
+
+    return data;
+}
+
+// =====================
+// STATE
+// =====================
+let STATE = { users: [], services: [] };
+
+// =====================
+// SOCKET
+// =====================
+let ws;
+
+function connectWS() {
+    ws = new WebSocket(`ws://${location.host}`);
+
+    ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+
+        if (msg.type === "admin:state") {
+            STATE = msg;
+            render();
+        }
+    };
+
+    ws.onopen = () => {
+        showConnectionState("live");
+    };
+
+    ws.onclose = () => {
+        showConnectionState("reconnecting");
+        setTimeout(connectSocket, 2000);
+    };
+
+    ws.onerror = () => {
+        showConnectionState("offline");
     };
 
     function getCSRF() {
@@ -111,9 +172,10 @@
         }, 2000);
     }
 
-    function showConnectionState(connected) {
+    function showConnectionState(state) {
         let el = document.getElementById("admin-live-status");
         const panel = document.querySelector(".profile-panel");
+
         if (!el && panel) {
             el = document.createElement("div");
             el.id = "admin-live-status";
@@ -121,10 +183,27 @@
             panel.appendChild(el);
         }
 
-        if (el) {
-            el.textContent = connected ? "Live sync connected" : "Live sync reconnecting...";
-            el.dataset.connected = connected ? "1" : "0";
-        }
+        if (!el) return;
+
+        const states = {
+            live: {
+                icon: "🟢",
+                text: "Live",
+            },
+            reconnecting: {
+                icon: "🔴",
+                text: "Reconnecting",
+            },
+            offline: {
+                icon: "⚫",
+                text: "Offline",
+            }
+        };
+
+        const s = states[state] || states.offline;
+
+        el.innerHTML = `${s.icon} ${s.text}`;
+        el.dataset.state = state;
     }
 
     function setupTabs() {
@@ -539,3 +618,11 @@
         setInterval(() => loadState().catch(() => {}), 15000);
     });
 })();
+});
+
+function pushAdminState(req) {
+    req.app.get("realtime").broadcastAdminState({
+        users: listUsers(),
+                                                services: listServices()
+    });
+}

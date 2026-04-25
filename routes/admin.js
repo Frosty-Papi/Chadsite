@@ -7,6 +7,54 @@ const { deleteAvatarFile } = require("../lib/files");
 
 const router = express.Router();
 
+function safeRoute(handler) {
+  return (req, res) => {
+    try {
+      return handler(req, res);
+    } catch (err) {
+      console.error("ADMIN ROUTE ERROR:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
+}
+
+function parseUserId(req, res) {
+  const userId = Number(req.body.userId);
+  if (!userId) {
+    res.status(400).json({ error: "Invalid userId" });
+    return null;
+  }
+  return userId;
+}
+
+function getTargetUser(userId, res) {
+  const target = db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
+  if (!target) {
+    res.status(404).json({ error: "User not found" });
+    return null;
+  }
+  return target;
+}
+
+function requirePermission(actor, target, res) {
+  if (!canActOnTarget(actor, target)) {
+    res.status(403).json({ error: "Forbidden" });
+    return false;
+  }
+  return true;
+}
+
+function pushAdminState(req) {
+  try {
+    req.app.get("realtime")?.broadcastAdminState({
+      users: listUsers(),
+                                                 services: listServices()
+    });
+  } catch (e) {
+    console.warn("Realtime broadcast failed:", e.message);
+  }
+}
+
 function normalizeName(v) {
   return String(v || "").trim();
 }
@@ -112,24 +160,29 @@ router.post("/admin/user", requireSuperAdmin, (req, res) => {
 });
 
 // DELETE USER
-router.post("/admin/user/delete", requireSuperAdmin, (req, res) => {
-  const userId = Number(req.body.userId);
+router.post("/admin/user/delete", requireSuperAdmin, safeRoute((req, res) => {
+  const userId = parseUserId(req, res);
+  if (!userId) return;
 
   if (userId === req.session.userId) {
     return res.status(400).json({ error: "Cannot delete yourself" });
   }
 
-  const target = db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
-  if (!target || target.role === "super_admin") {
-    return res.status(400).json({ error: "Invalid target" });
+  const target = getTargetUser(userId, res);
+  if (!target) return;
+
+  if (target.role === "super_admin") {
+    return res.status(400).json({ error: "Cannot delete super admin" });
   }
 
   if (target.avatar) deleteAvatarFile(target.avatar);
 
   db.prepare("DELETE FROM users WHERE id = ?").run(userId);
 
+  pushAdminState(req);
+
   res.json({ success: true });
-});
+}));
 
 // ROLE CHANGE
 router.post("/admin/user/role", requireSuperAdmin, (req, res) => {
@@ -149,118 +202,142 @@ router.post("/admin/user/role", requireSuperAdmin, (req, res) => {
 });
 
 // DISABLE
-router.post("/admin/user/disable", requireAdminAccess, (req, res) => {
+router.post("/admin/user/disable", requireAdminAccess, safeRoute((req, res) => {
   const actor = getUser(req);
-  const { userId, mode, disabledUntil } = req.body;
 
-  const target = db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
-  if (!canActOnTarget(actor, target)) {
-    return res.status(403).json({ error: "Forbidden" });
-  }
+  const userId = parseUserId(req, res);
+  if (!userId) return;
 
-  let until = null;
-  if (mode === "temporary" && disabledUntil) {
-    until = new Date(disabledUntil).toISOString();
-  }
+  const target = getTargetUser(userId, res);
+  if (!target) return;
 
-  db.prepare(`UPDATE users SET is_disabled = 1, disabled_until = ? WHERE id = ?`).run(until, userId);
+  if (!requirePermission(actor, target, res)) return;
+
+  db.prepare(`
+  UPDATE users SET is_disabled = 1, disabled_until = NULL WHERE id = ?
+  `).run(userId);
+
+  pushAdminState(req);
+
   res.json({ success: true });
-});
+}));
 
 // ENABLE
-router.post("/admin/user/enable", requireAdminAccess, (req, res) => {
+router.post("/admin/user/enable", requireAdminAccess, safeRoute((req, res) => {
   const actor = getUser(req);
-  const { userId } = req.body;
 
-  const target = db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
-  if (!canActOnTarget(actor, target)) {
-    return res.status(403).json({ error: "Forbidden" });
-  }
+  const userId = parseUserId(req, res);
+  if (!userId) return;
 
-  db.prepare(`UPDATE users SET is_disabled = 0, disabled_until = NULL WHERE id = ?`).run(userId);
+  const target = getTargetUser(userId, res);
+  if (!target) return;
+
+  if (!requirePermission(actor, target, res)) return;
+
+  db.prepare(`
+  UPDATE users SET is_disabled = 0, disabled_until = NULL WHERE id = ?
+  `).run(userId);
+
+  pushAdminState(req);
+
   res.json({ success: true });
-});
+}));
 
 // RESET PASSWORD
-router.post("/admin/user/reset-password", requireAdminAccess, (req, res) => {
+router.post("/admin/user/reset-password", requireAdminAccess, safeRoute((req, res) => {
   const actor = getUser(req);
-  const { userId } = req.body;
 
-  const target = db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
-  if (!canActOnTarget(actor, target)) {
-    return res.status(403).json({ error: "Forbidden" });
-  }
+  const userId = parseUserId(req, res);
+  if (!userId) return;
 
-  let temp;
-  try {
-    temp = generateCompliantOneTimePassword(target.username);
-  } catch {
-    return res.status(500).json({ error: "Password generation failed" });
-  }
+  const target = getTargetUser(userId, res);
+  if (!target) return;
 
+  if (!requirePermission(actor, target, res)) return;
+
+  const temp = generateCompliantOneTimePassword(target.username);
   const hash = bcrypt.hashSync(temp, 10);
 
-  db.prepare(`UPDATE users SET password_hash = ?, must_reset_password = 1, password_reset_token = 1 WHERE id = ?`)
-    .run(hash, userId);
+  db.prepare(`
+  UPDATE users
+  SET password_hash = ?, must_reset_password = 1, password_reset_token = 1
+  WHERE id = ?
+  `).run(hash, userId);
+
+  pushAdminState(req);
 
   res.json({ success: true, password: temp });
-});
+}));
 
 // FORCE RESET
-router.post("/admin/user/force-reset", requireAdminAccess, (req, res) => {
+router.post("/admin/user/force-reset", requireAdminAccess, safeRoute((req, res) => {
   const actor = getUser(req);
-  const { userId } = req.body;
 
-  const target = db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
-  if (!canActOnTarget(actor, target)) {
-    return res.status(403).json({ error: "Forbidden" });
-  }
+  const userId = parseUserId(req, res);
+  if (!userId) return;
 
-  db.prepare(`UPDATE users SET must_reset_password = 1 WHERE id = ?`).run(userId);
+  const target = getTargetUser(userId, res);
+  if (!target) return;
+
+  if (!requirePermission(actor, target, res)) return;
+
+  db.prepare(`
+  UPDATE users SET must_reset_password = 1 WHERE id = ?
+  `).run(userId);
+
+  pushAdminState(req);
+
   res.json({ success: true });
-});
+}));
 
 // CREATE SERVICE
-router.post("/admin/service", requireSuperAdmin, (req, res) => {
+router.post("/admin/service", requireSuperAdmin, safeRoute((req, res) => {
   const payload = parseServicePayload(req.body);
   const error = validateServicePayload(payload);
 
   if (error) return res.status(400).json({ error });
 
   const result = db.prepare(`
-    INSERT INTO services (name, path, icon, is_external, min_role)
-    VALUES (?, ?, ?, ?, ?)
+  INSERT INTO services (name, path, icon, is_external, min_role)
+  VALUES (?, ?, ?, ?, ?)
   `).run(payload.name, payload.path, null, payload.isExternal ? 1 : 0, payload.min_role);
 
-  const service = db.prepare("SELECT * FROM services WHERE id = ?").get(result.lastInsertRowid);
+  pushAdminState(req);
 
-  res.json({ success: true, service });
-});
+  res.json({ success: true, id: result.lastInsertRowid });
+}));
 
 // UPDATE SERVICE
-router.post("/admin/service/update", requireSuperAdmin, (req, res) => {
+router.post("/admin/service/update", requireSuperAdmin, safeRoute((req, res) => {
+  const serviceId = Number(req.body.serviceId);
+  if (!serviceId) return res.status(400).json({ error: "Invalid serviceId" });
+
   const payload = parseServicePayload(req.body);
-
-  if (!req.body.serviceId) {
-    return res.status(400).json({ error: "Missing serviceId" });
-  }
-
   const error = validateServicePayload(payload);
+
   if (error) return res.status(400).json({ error });
 
   db.prepare(`
-    UPDATE services
-    SET name = ?, path = ?, min_role = ?, is_external = ?
-    WHERE id = ?
-  `).run(payload.name, payload.path, payload.min_role, payload.isExternal ? 1 : 0, req.body.serviceId);
+  UPDATE services
+  SET name = ?, path = ?, min_role = ?, is_external = ?
+  WHERE id = ?
+  `).run(payload.name, payload.path, payload.min_role, payload.isExternal ? 1 : 0, serviceId);
+
+  pushAdminState(req);
 
   res.json({ success: true });
-});
+}));
 
 // DELETE SERVICE
-router.post("/admin/service/delete", requireSuperAdmin, (req, res) => {
-  db.prepare("DELETE FROM services WHERE id = ?").run(req.body.serviceId);
+router.post("/admin/service/delete", requireSuperAdmin, safeRoute((req, res) => {
+  const serviceId = Number(req.body.serviceId);
+  if (!serviceId) return res.status(400).json({ error: "Invalid serviceId" });
+
+  db.prepare("DELETE FROM services WHERE id = ?").run(serviceId);
+
+  pushAdminState(req);
+
   res.json({ success: true });
-});
+}));
 
 module.exports = router;
