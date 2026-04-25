@@ -32,29 +32,29 @@ router.get("/profile", requireLogin, (req, res) => {
   const user = getUser(req);
 
   const incomingRequests = db.prepare(`
-  SELECT fr.id, fr.requester_user_id, fr.created_at,
-  u.username, u.display_name, u.avatar
-  FROM friend_requests fr
-  JOIN users u ON u.id = fr.requester_user_id
-  WHERE fr.addressee_user_id = ? AND fr.status = 'pending'
-  ORDER BY fr.created_at DESC
+    SELECT fr.id, fr.sender_id, fr.created_at,
+           u.username, u.display_name, u.avatar
+    FROM friend_requests fr
+    JOIN users u ON u.id = fr.sender_id
+    WHERE fr.receiver_id = ? AND fr.status = 'pending'
+    ORDER BY fr.created_at DESC
   `).all(user.id);
 
   const outgoingRequests = db.prepare(`
-  SELECT fr.id, fr.addressee_user_id, fr.created_at,
-  u.username, u.display_name, u.avatar
-  FROM friend_requests fr
-  JOIN users u ON u.id = fr.addressee_user_id
-  WHERE fr.requester_user_id = ? AND fr.status = 'pending'
-  ORDER BY fr.created_at DESC
+    SELECT fr.id, fr.receiver_id, fr.created_at,
+           u.username, u.display_name, u.avatar
+    FROM friend_requests fr
+    JOIN users u ON u.id = fr.receiver_id
+    WHERE fr.sender_id = ? AND fr.status = 'pending'
+    ORDER BY fr.created_at DESC
   `).all(user.id);
 
   const friends = db.prepare(`
-  SELECT u.id, u.username, u.display_name, u.avatar
-  FROM friendships f
-  JOIN users u ON u.id = f.friend_user_id
-  WHERE f.user_id = ?
-  ORDER BY COALESCE(u.display_name, u.username) COLLATE NOCASE ASC
+    SELECT u.id, u.username, u.display_name, u.avatar
+    FROM friends f
+    JOIN users u ON u.id = f.friend_id
+    WHERE f.user_id = ?
+    ORDER BY COALESCE(u.display_name, u.username) COLLATE NOCASE ASC
   `).all(user.id);
 
   res.render("profile", {
@@ -67,11 +67,7 @@ router.get("/profile", requireLogin, (req, res) => {
 router.post("/profile/update", requireLogin, upload.single("avatar"), async (req, res) => {
   const user = getUser(req);
   const hasDisplayName = Object.prototype.hasOwnProperty.call(req.body, "display_name");
-<<<<<<< Updated upstream
   const displayName = hasDisplayName ? String(req.body.display_name || "").trim() : null;
-=======
-  const displayName = hasDisplayName ? (req.body.display_name || "").trim() : null;
->>>>>>> Stashed changes
 
   const existingUser = db.prepare("SELECT avatar FROM users WHERE id = ?").get(user.id);
   const oldAvatar = existingUser?.avatar;
@@ -111,25 +107,9 @@ router.post("/profile/update", requireLogin, upload.single("avatar"), async (req
         .run(displayName || null, user.id);
     }
 
-<<<<<<< Updated upstream
     if (newAvatarPath && oldAvatar && oldAvatar !== newAvatarPath) {
       deleteAvatarFile(oldAvatar);
     }
-=======
-    newAvatarPath = `/uploads/avatars/${filename}`;
-  }
-
-  if (newAvatarPath && hasDisplayName) {
-    db.prepare(`UPDATE users SET display_name = ?, avatar = ? WHERE id = ?`)
-    .run(displayName || null, newAvatarPath, user.id);
-  } else if (newAvatarPath) {
-    db.prepare(`UPDATE users SET avatar = ? WHERE id = ?`)
-    .run(newAvatarPath, user.id);
-  } else if (hasDisplayName) {
-    db.prepare(`UPDATE users SET display_name = ? WHERE id = ?`)
-    .run(displayName || null, user.id);
-  }
->>>>>>> Stashed changes
 
     if (wantsJson(req)) {
       const updatedUser = db.prepare(`
@@ -172,9 +152,9 @@ router.post("/profile/password", requireLogin, (req, res) => {
   const hash = bcrypt.hashSync(newPass, 10);
 
   db.prepare(`
-  UPDATE users
-  SET password_hash = ?, must_reset_password = 0, password_reset_token = 0
-  WHERE id = ?
+    UPDATE users
+    SET password_hash = ?, must_reset_password = 0, password_reset_token = 0
+    WHERE id = ?
   `).run(hash, user.id);
 
   res.redirect("/profile");
@@ -189,9 +169,9 @@ router.post("/api/profile/friends/request", requireLogin, (req, res) => {
   }
 
   const target = db.prepare(`
-  SELECT id, username, display_name
-  FROM users
-  WHERE lower(username) = ?
+    SELECT id, username, display_name
+    FROM users
+    WHERE lower(username) = ?
   `).get(username);
 
   if (!target) {
@@ -203,9 +183,9 @@ router.post("/api/profile/friends/request", requireLogin, (req, res) => {
   }
 
   const existingFriend = db.prepare(`
-  SELECT id
-  FROM friends
-  WHERE user_id = ? AND friend_id = ?
+    SELECT 1
+    FROM friends
+    WHERE user_id = ? AND friend_id = ?
   `).get(user.id, target.id);
 
   if (existingFriend) {
@@ -213,10 +193,10 @@ router.post("/api/profile/friends/request", requireLogin, (req, res) => {
   }
 
   const existingRequest = db.prepare(`
-  SELECT id, sender_id, receiver_id, status
-  FROM friend_requests
-  WHERE (sender_id = ? AND receiver_id = ?)
-  OR (sender_id = ? AND receiver_id = ?)
+    SELECT id, sender_id, receiver_id, status
+    FROM friend_requests
+    WHERE (sender_id = ? AND receiver_id = ?)
+       OR (sender_id = ? AND receiver_id = ?)
   `).get(user.id, target.id, target.id, user.id);
 
   if (existingRequest && existingRequest.status === "pending") {
@@ -228,8 +208,8 @@ router.post("/api/profile/friends/request", requireLogin, (req, res) => {
   }
 
   db.prepare(`
-  INSERT INTO friend_requests (sender_id, receiver_id, status)
-  VALUES (?, ?, 'pending')
+    INSERT INTO friend_requests (sender_id, receiver_id, status)
+    VALUES (?, ?, 'pending')
   `).run(user.id, target.id);
 
   res.json({ success: true });
@@ -245,9 +225,9 @@ router.post("/api/profile/friends/respond", requireLogin, (req, res) => {
   }
 
   const request = db.prepare(`
-  SELECT id, sender_id, receiver_id, status
-  FROM friend_requests
-  WHERE id = ? AND receiver_id = ?
+    SELECT id, sender_id, receiver_id, status
+    FROM friend_requests
+    WHERE id = ? AND receiver_id = ?
   `).get(requestId, user.id);
 
   if (!request || request.status !== "pending") {
@@ -256,10 +236,10 @@ router.post("/api/profile/friends/respond", requireLogin, (req, res) => {
 
   if (action === "reject") {
     db.prepare(`
-    UPDATE friend_requests
-    SET status = 'rejected',
-    updated_at = CURRENT_TIMESTAMP
-    WHERE id = ?
+      UPDATE friend_requests
+      SET status = 'rejected',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
     `).run(requestId);
 
     return res.json({ success: true });
@@ -267,20 +247,20 @@ router.post("/api/profile/friends/respond", requireLogin, (req, res) => {
 
   const tx = db.transaction(() => {
     db.prepare(`
-    UPDATE friend_requests
-    SET status = 'accepted',
-    updated_at = CURRENT_TIMESTAMP
-    WHERE id = ?
+      UPDATE friend_requests
+      SET status = 'accepted',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
     `).run(requestId);
 
     db.prepare(`
-    INSERT OR IGNORE INTO friends (user_id, friend_id)
-    VALUES (?, ?)
+      INSERT OR IGNORE INTO friends (user_id, friend_id)
+      VALUES (?, ?)
     `).run(user.id, request.sender_id);
 
     db.prepare(`
-    INSERT OR IGNORE INTO friends (user_id, friend_id)
-    VALUES (?, ?)
+      INSERT OR IGNORE INTO friends (user_id, friend_id)
+      VALUES (?, ?)
     `).run(request.sender_id, user.id);
   });
 
