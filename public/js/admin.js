@@ -161,3 +161,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     });
 });
+
+document.querySelectorAll("[data-tab]").forEach(btn => {
+    btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(t => t.classList.add("hidden"));
+        document.querySelectorAll("[data-tab]").forEach(b => b.classList.remove("active"));
+
+        document.getElementById("tab-" + btn.dataset.tab)?.classList.remove("hidden");
+        btn.classList.add("active");
+    });
+});

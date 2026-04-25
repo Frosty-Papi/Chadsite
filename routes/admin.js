@@ -59,12 +59,20 @@ function validateServicePayload({ name, path, isExternal }) {
 
 router.get("/admin", requireAdminAccess, (req, res) => {
   const viewer = getUser(req);
+  console.log(viewer);
 
   res.render("admin", {
     users: listUsers(),
     services: viewer.role === "super_admin" ? listServices() : [],
     viewer,
     isSuperAdmin: viewer.role === "super_admin"
+  });
+});
+
+router.get("/api/admin/state", requireAdminAccess, (req, res) => {
+  res.json({
+    users: listUsers(),
+           services: listServices()
   });
 });
 
