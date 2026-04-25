@@ -1,16 +1,13 @@
 const bell = document.getElementById("notif-bell");
 const panel = document.getElementById("notif-panel");
 const list = document.getElementById("notif-list");
-
+const count = document.getElementById("notif-count");
 
 bell?.addEventListener("click", () => {
     panel.classList.toggle("hidden");
 });
 
 async function loadNotifications() {
-    const bell = document.getElementById("notif-bell");
-    const list = document.getElementById("notif-list");
-
     if (!bell || !list) return;
 
     const res = await fetch("/api/notifications");
@@ -27,76 +24,58 @@ async function loadNotifications() {
     }
 
     bell.classList.remove("hidden");
-
-    notifications.sort((a, b) => b.id - a.id);
+    if (count) count.textContent = data.unreadCount || "";
 
     notifications.forEach(n => {
         const li = document.createElement("li");
+        if (!n.is_read) li.classList.add("notif-unread");
 
         if (n.type === "invite") {
-            li.innerHTML = `
-            ${n.username} invited you to ${n.title}
-            <button data-id="${n.id}" class="acceptInvite">Join</button>
-            `;
+            li.innerHTML = `${n.username} invited you to ${n.title} <button data-id="${n.id}" class="acceptInvite">Join</button>`;
         }
 
         if (n.type === "friend_request") {
-            li.innerHTML = `
-            ${n.username} sent you a friend request
-            <button data-id="${n.id}" class="acceptFriend">Accept</button>
-            `;
+            li.innerHTML = `${n.username} sent you a friend request <button data-id="${n.id}" class="acceptFriend">Accept</button>`;
         }
+
+        li.addEventListener("click", async () => {
+            await fetch("/api/notifications/read", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "CSRF-Token": document.querySelector('input[name="_csrf"]')?.value
+                },
+                body: JSON.stringify({ id: n.id, type: n.type })
+            });
+
+            li.classList.remove("notif-unread");
+        });
 
         list.appendChild(li);
     });
 }
 
-document.addEventListener("click", async (e) => {
-    if (!e.target.classList.contains("acceptInvite")) return;
-
-    const inviteId = e.target.dataset.id;
-
-    const res = await fetch("/api/play/invite/respond", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "CSRF-Token": document.querySelector('input[name="_csrf"]')?.value
-        },
-        body: JSON.stringify({ inviteId })
-    });
-
-    const data = await res.json();
-    if (data.redirect) location.href = data.redirect;
-});
-
 setInterval(loadNotifications, 10000);
 loadNotifications();
 
-document.addEventListener("DOMContentLoaded", () => {
-    const trigger = document.querySelector(".profile-trigger");
-    const dropdown = document.getElementById("profile-dropdown");
+// accept invite
+document.addEventListener("click", async (e) => {
+    if (e.target.classList.contains("acceptInvite")) {
+        const inviteId = e.target.dataset.id;
 
-    if (trigger && dropdown) {
-        trigger.addEventListener("click", (e) => {
-            e.stopPropagation();
-            const isOpen = dropdown.style.display === "block";
-            dropdown.style.display = isOpen ? "none" : "block";
+        const res = await fetch("/api/play/invite/respond", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "CSRF-Token": document.querySelector('input[name="_csrf"]')?.value
+            },
+            body: JSON.stringify({ inviteId })
         });
+
+        const data = await res.json();
+        if (data.redirect) location.href = data.redirect;
     }
 
-    document.addEventListener("click", (e) => {
-        if (!dropdown) return;
-
-        const insideDropdown = e.target.closest("#profile-dropdown");
-        const insideTrigger = e.target.closest(".profile-trigger");
-
-        if (!insideDropdown && !insideTrigger) {
-            dropdown.style.display = "none";
-        }
-    });
-});
-
-document.addEventListener("click", async (e) => {
     if (e.target.classList.contains("acceptFriend")) {
         const id = e.target.dataset.id;
 
@@ -104,7 +83,7 @@ document.addEventListener("click", async (e) => {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "CSRF-Token": document.querySelector('input[name="_csrf"]').value
+                "CSRF-Token": document.querySelector('input[name="_csrf"]')?.value
             },
             body: JSON.stringify({ requestId: id, action: "accept" })
         });
