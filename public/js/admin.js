@@ -87,11 +87,22 @@ function addUserRow(user){
 
 document.addEventListener("DOMContentLoaded",()=>{
 
-    // tabs
-    document.querySelectorAll("[data-tab]").forEach(btn=>{
+    // tabs (FIXED active state)
+    const tabButtons = document.querySelectorAll("[data-tab]");
+
+    tabButtons.forEach(btn=>{
         btn.addEventListener("click",()=>{
+            // hide all tabs
             document.querySelectorAll(".tab").forEach(t=>t.classList.add("hidden"));
+
+            // remove active from all buttons
+            tabButtons.forEach(b=>b.classList.remove("active"));
+
+            // show selected tab
             document.getElementById("tab-"+btn.dataset.tab)?.classList.remove("hidden");
+
+            // mark this button active
+            btn.classList.add("active");
         });
     });
 
