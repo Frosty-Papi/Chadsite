@@ -32,40 +32,27 @@ router.get("/profile", requireLogin, (req, res) => {
   const user = getUser(req);
 
   const incomingRequests = db.prepare(`
-  SELECT
-  fr.id,
-  fr.sender_id,
-  fr.created_at,
-  u.username,
-  u.display_name
+  SELECT fr.id, fr.requester_user_id, fr.created_at,
+  u.username, u.display_name, u.avatar
   FROM friend_requests fr
-  JOIN users u ON u.id = fr.sender_id
-  WHERE fr.receiver_id = ?
-  AND fr.status = 'pending'
+  JOIN users u ON u.id = fr.requester_user_id
+  WHERE fr.addressee_user_id = ? AND fr.status = 'pending'
   ORDER BY fr.created_at DESC
   `).all(user.id);
 
   const outgoingRequests = db.prepare(`
-  SELECT
-  fr.id,
-  fr.receiver_id,
-  fr.created_at,
-  u.username,
-  u.display_name
+  SELECT fr.id, fr.addressee_user_id, fr.created_at,
+  u.username, u.display_name, u.avatar
   FROM friend_requests fr
-  JOIN users u ON u.id = fr.receiver_id
-  WHERE fr.sender_id = ?
-  AND fr.status = 'pending'
+  JOIN users u ON u.id = fr.addressee_user_id
+  WHERE fr.requester_user_id = ? AND fr.status = 'pending'
   ORDER BY fr.created_at DESC
   `).all(user.id);
 
   const friends = db.prepare(`
-  SELECT
-  u.id,
-  u.username,
-  u.display_name
-  FROM friends f
-  JOIN users u ON u.id = f.friend_id
+  SELECT u.id, u.username, u.display_name, u.avatar
+  FROM friendships f
+  JOIN users u ON u.id = f.friend_user_id
   WHERE f.user_id = ?
   ORDER BY COALESCE(u.display_name, u.username) COLLATE NOCASE ASC
   `).all(user.id);

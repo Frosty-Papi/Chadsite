@@ -72,7 +72,7 @@ function getUserOpenLobbyOrStartedSession(userId) {
     SELECT s.*
     FROM play_sessions s
     JOIN play_session_members m ON m.session_id = s.id
-    WHERE m.user_id = ? AND s.status IN ('lobby','started')
+    WHERE m.user_id = ? AND s.status IN ('lobby','active')
     ORDER BY s.created_at DESC
     LIMIT 1
   `).get(userId);
@@ -245,7 +245,7 @@ router.get("/play/session/:sessionKey", requireLogin, requirePlayAccess, (req, r
     FROM play_sessions s
     JOIN play_games g ON g.id = s.game_id
     JOIN users u ON u.id = s.host_user_id
-    WHERE s.session_key = ? AND s.status IN ('lobby','started')
+    WHERE s.session_key = ? AND s.status IN ('lobby','active')
   `).get(req.params.sessionKey);
 
   if (!session) return res.status(404).send("Lobby not found");
@@ -312,7 +312,7 @@ router.post("/api/play/sessions/:sessionId/start", requireLogin, requirePlayAcce
 
   db.prepare(`
     UPDATE play_sessions
-    SET status = 'started', started_at = CURRENT_TIMESTAMP
+    SET status = 'active', started_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).run(session.id);
 
@@ -324,7 +324,7 @@ router.post("/api/play/sessions/:sessionId/terminate", requireLogin, requirePlay
   const outcome = req.body.outcome === "completed" ? "completed" : "abandoned";
 
   const session = db.prepare(`
-    SELECT * FROM play_sessions WHERE id = ? AND status IN ('lobby','started')
+    SELECT * FROM play_sessions WHERE id = ? AND status IN ('lobby','active')
   `).get(req.params.sessionId);
 
   if (!session) return res.status(404).json({ error: "Lobby not found" });

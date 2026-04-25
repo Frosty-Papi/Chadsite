@@ -11,13 +11,15 @@ function isRoleAtLeast(role, min) {
 }
 
 function getUser(req) {
+  if (req.user) return req.user;
   if (!req.session.userId) return null;
 
-  return db.prepare(`
+  req.user = db.prepare(`
     SELECT id, username, display_name, role, avatar,
            is_disabled, disabled_until, must_reset_password
     FROM users WHERE id = ?
   `).get(req.session.userId);
+  return req.user;
 }
 
 function wantsJSON(req) {

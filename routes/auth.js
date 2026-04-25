@@ -12,7 +12,8 @@ router.get("/login", (req, res) => {
 router.post("/login", (req, res) => {
   const { username, password } = req.body;
 
-  const user = db.prepare("SELECT * FROM users WHERE username = ?").get(username);
+  const username = String(req.body.username || "").trim().toLowerCase();
+  const user = db.prepare("SELECT * FROM users WHERE lower(username) = ?").get(username);
 
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
     return res.render("login", { error: "Invalid login" });

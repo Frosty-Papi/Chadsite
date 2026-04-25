@@ -217,6 +217,10 @@ router.post("/admin/service", requireSuperAdmin, (req, res) => {
     return res.status(400).json({ error: "Missing fields" });
   }
 
+  if (!/^\/[a-z0-9/_-]*$/i.test(path)) {
+    return res.status(400).json({ error: "Invalid service path" });
+  }
+
   const result = db.prepare(`
     INSERT INTO services (name, path, icon, is_external, min_role)
     VALUES (?, ?, ?, ?, ?)

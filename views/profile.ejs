@@ -68,9 +68,20 @@
             <li class="muted">No friends yet.</li>
           <% } %>
           <% friends.forEach(friend => { %>
-            <li>
-              <strong><%= friend.display_name || friend.username %></strong>
-              <span>@<%= friend.username %></span>
+            <li class="friend-row">
+              <div class="friend-person">
+                <% if (friend.avatar) { %>
+                  <img class="friend-avatar" src="<%= friend.avatar %>" alt="">
+                <% } else { %>
+                  <div class="friend-avatar fallback small">
+                    <%= (friend.display_name || friend.username).charAt(0).toUpperCase() %>
+                  </div>
+                <% } %>
+                <div>
+                  <strong><%= friend.display_name || friend.username %></strong>
+                  <span>@<%= friend.username %></span>
+                </div>
+              </div>
             </li>
           <% }) %>
         </ul>

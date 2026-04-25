@@ -184,4 +184,18 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }, "image/png");
     });
+
+    document.querySelectorAll(".friends-tab-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const tab = btn.dataset.friendsTab;
+
+            document.querySelectorAll(".friends-tab-btn")
+            .forEach(b => b.classList.toggle("active", b === btn));
+
+            document.querySelectorAll(".friends-tab-panel")
+            .forEach(panel => {
+                panel.classList.toggle("active", panel.id === `friends-tab-${tab}`);
+            });
+        });
+    });
 });

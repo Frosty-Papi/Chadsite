@@ -132,23 +132,6 @@ for (const s of services) {
   }
 }
 
-// Ensure core service entries exist
-
-const defaultServices = [
-  { name: "Deck", path: "/deck", slug: "deck", min_role: "user", sort_order: 0 },
-  { name: "Play", path: "/play", slug: "play", min_role: "user", sort_order: 10 }
-];
-
-for (const service of defaultServices) {
-  const existing = db.prepare("SELECT id FROM services WHERE path = ?").get(service.path);
-  if (!existing) {
-    db.prepare(`
-      INSERT INTO services (name, path, slug, min_role, is_enabled, sort_order, is_external)
-      VALUES (?, ?, ?, ?, 1, ?, 0)
-    `).run(service.name, service.path, service.slug, service.min_role, service.sort_order);
-  }
-}
-
 // FRIEND REQUESTS
 
 db.prepare(`
@@ -165,6 +148,53 @@ CREATE TABLE IF NOT EXISTS friend_requests (
   CHECK (requester_user_id != addressee_user_id)
 )
 `).run();
+
+const friendRequestCols = db.prepare(`PRAGMA table_info(friend_requests)`).all();
+const hasRequester = friendRequestCols.some(c => c.name === "requester_user_id");
+const hasSender = friendRequestCols.some(c => c.name === "sender_id");
+
+if (!hasRequester && hasSender) {
+  db.transaction(() => {
+    db.prepare(`ALTER TABLE friend_requests RENAME TO friend_requests_old`).run();
+
+    db.prepare(`
+    CREATE TABLE friend_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      requester_user_id INTEGER NOT NULL,
+      addressee_user_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending'
+      CHECK(status IN ('pending','accepted','rejected','cancelled')),
+                                  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                  UNIQUE(requester_user_id, addressee_user_id),
+                                  FOREIGN KEY (requester_user_id) REFERENCES users(id) ON DELETE CASCADE,
+                                  FOREIGN KEY (addressee_user_id) REFERENCES users(id) ON DELETE CASCADE,
+                                  CHECK (requester_user_id != addressee_user_id)
+    )
+    `).run();
+
+    db.prepare(`
+    INSERT OR IGNORE INTO friend_requests (
+      id,
+      requester_user_id,
+      addressee_user_id,
+      status,
+      created_at,
+      updated_at
+    )
+    SELECT
+    id,
+    sender_id,
+    receiver_id,
+    status,
+    COALESCE(created_at, CURRENT_TIMESTAMP),
+               COALESCE(updated_at, CURRENT_TIMESTAMP)
+               FROM friend_requests_old
+               `).run();
+
+               db.prepare(`DROP TABLE friend_requests_old`).run();
+  })();
+}
 
 db.prepare(`
 CREATE TABLE IF NOT EXISTS friendships (
