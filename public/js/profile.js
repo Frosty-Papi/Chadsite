@@ -128,7 +128,21 @@ document.addEventListener("DOMContentLoaded", () => {
         reader.readAsDataURL(file);
     });
 
+<<<<<<< Updated upstream
     cancelBtn?.addEventListener("click", resetCropper);
+=======
+                preview.onload = () => {
+                    if (typeof Cropper === "undefined") {
+                        alert("Image cropper failed to load. Please refresh.");
+                        return;
+                    }
+                    cropper = new Cropper(preview, {
+                        aspectRatio: 1,
+                        viewMode: 1
+                    });
+                };
+            };
+>>>>>>> Stashed changes
 
     saveBtn?.addEventListener("click", async () => {
         if (!cropper) {

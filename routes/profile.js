@@ -67,7 +67,11 @@ router.get("/profile", requireLogin, (req, res) => {
 router.post("/profile/update", requireLogin, upload.single("avatar"), async (req, res) => {
   const user = getUser(req);
   const hasDisplayName = Object.prototype.hasOwnProperty.call(req.body, "display_name");
+<<<<<<< Updated upstream
   const displayName = hasDisplayName ? String(req.body.display_name || "").trim() : null;
+=======
+  const displayName = hasDisplayName ? (req.body.display_name || "").trim() : null;
+>>>>>>> Stashed changes
 
   const existingUser = db.prepare("SELECT avatar FROM users WHERE id = ?").get(user.id);
   const oldAvatar = existingUser?.avatar;
@@ -107,9 +111,25 @@ router.post("/profile/update", requireLogin, upload.single("avatar"), async (req
         .run(displayName || null, user.id);
     }
 
+<<<<<<< Updated upstream
     if (newAvatarPath && oldAvatar && oldAvatar !== newAvatarPath) {
       deleteAvatarFile(oldAvatar);
     }
+=======
+    newAvatarPath = `/uploads/avatars/${filename}`;
+  }
+
+  if (newAvatarPath && hasDisplayName) {
+    db.prepare(`UPDATE users SET display_name = ?, avatar = ? WHERE id = ?`)
+    .run(displayName || null, newAvatarPath, user.id);
+  } else if (newAvatarPath) {
+    db.prepare(`UPDATE users SET avatar = ? WHERE id = ?`)
+    .run(newAvatarPath, user.id);
+  } else if (hasDisplayName) {
+    db.prepare(`UPDATE users SET display_name = ? WHERE id = ?`)
+    .run(displayName || null, user.id);
+  }
+>>>>>>> Stashed changes
 
     if (wantsJson(req)) {
       const updatedUser = db.prepare(`

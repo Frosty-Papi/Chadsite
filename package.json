@@ -9,7 +9,11 @@
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.9.0",
     "cookie-parser": "^1.4.7",
+<<<<<<< Updated upstream
     "cropperjs": "^1.6.2",
+=======
+    "cropperjs": "^2.1.1",
+>>>>>>> Stashed changes
     "csurf": "^1.2.2",
     "ejs": "^5.0.2",
     "express": "^5.2.1",
