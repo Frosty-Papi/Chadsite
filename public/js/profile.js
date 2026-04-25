@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const confirm = passwordForm.querySelector('input[name="confirm"]')?.value || "";
     if (next !== confirm) {
       e.preventDefault();
-      alert("Passwords do not match");
+      toast.error("Passwords do not match");
     }
   });
 
@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
       friendForm.reset();
       location.reload();
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   });
 
@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
         await api("/api/profile/friends/respond", { requestId: requestItem.dataset.requestId, action });
         location.reload();
       } catch (err) {
-        alert(err.message);
+        toast.error(err.message);
       }
       return;
     }
@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
         await api("/api/friends/remove", { userId: row.dataset.userId });
         row.remove();
       } catch (err) {
-        alert(err.message);
+        toast.error(err.message);
       }
     }
   });
@@ -99,7 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      alert("Please choose an image file.");
+      toast.error("Please choose an image file.");
       input.value = "";
       return;
     }
@@ -123,7 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
   cancelAvatar?.addEventListener("click", resetCropper);
 
   saveAvatar?.addEventListener("click", async () => {
-    if (!cropper) return alert("Please choose an image first.");
+    if (!cropper) return toast.error("Please choose an image first.");
     if (status) status.textContent = "Uploading...";
 
     const canvas = cropper.getCroppedCanvas({ width: 300, height: 300 });

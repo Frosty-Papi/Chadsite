@@ -1,3 +1,11 @@
+window.alert = (msg) => {
+    if (String(msg).toLowerCase().includes("success")) {
+        toast.success(msg);
+    } else {
+        toast.error(msg);
+    }
+};
+
 document.addEventListener("DOMContentLoaded", () => {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
         document.querySelector('input[name="_csrf"]')?.value || "";

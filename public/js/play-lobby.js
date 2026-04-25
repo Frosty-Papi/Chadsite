@@ -20,7 +20,7 @@ if (container) {
 
     const data = await res.json();
     if (!res.ok) {
-      alert(data.error || "Failed to start session");
+      toast.error(data.error || "Failed to start session");
       return;
     }
 
@@ -39,7 +39,7 @@ if (container) {
 
     const data = await res.json();
     if (!res.ok) {
-      alert(data.error || "Failed to close lobby");
+      toast.error(data.error || "Failed to close lobby");
       return;
     }
 
@@ -62,5 +62,5 @@ document.getElementById("inviteBtn")?.addEventListener("click", async () => {
     })
   });
 
-  alert("Invite sent");
+  toast.error("Invite sent");
 });

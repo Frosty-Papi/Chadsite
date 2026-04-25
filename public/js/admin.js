@@ -9,7 +9,7 @@ async function api(url,body){
     if(!res.ok){
         let msg="Request failed";
         try{const j=await res.json();msg=j.error||msg}catch{}
-        alert(msg);
+        toast.error(msg);
         throw new Error(msg);
     }
     return res.json().catch(()=>({}));
@@ -193,7 +193,7 @@ document.addEventListener("DOMContentLoaded",()=>{
             e.target.textContent="Copied";
             setTimeout(()=>{e.target.textContent="Copy"},1500);
         }catch{
-            alert(text);
+            toast.error(text);
         }
     });
 
@@ -355,21 +355,15 @@ function validateServiceRow(row) {
 }
 
 function showToast(message, type = "success") {
-    const container = document.getElementById("toast-container");
-    if (!container) return;
+    const map = {
+        success: "success",
+        error: "error",
+        info: "info"
+    };
 
-    const toast = document.createElement("div");
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
+    const method = map[type] || "info";
 
-    container.appendChild(toast);
-
-    // trigger animation
-    setTimeout(() => toast.classList.add("show"), 10);
-
-    // auto remove
-    setTimeout(() => {
-        toast.classList.remove("show");
-        setTimeout(() => toast.remove(), 200);
-    }, 2500);
+    if (window.toast && window.toast[method]) {
+        window.toast[method](message);
+    }
 }
