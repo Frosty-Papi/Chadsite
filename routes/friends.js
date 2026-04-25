@@ -122,4 +122,17 @@ router.post("/api/friends/request/:id/respond", requireLogin, (req, res) => {
   res.json({ success: true });
 });
 
+router.post("/api/friends/remove", requireLogin, (req, res) => {
+  const user = getUser(req);
+  const targetId = Number(req.body.userId);
+
+  db.prepare(`
+  DELETE FROM friends
+  WHERE (user_id = ? AND friend_id = ?)
+  OR (user_id = ? AND friend_id = ?)
+  `).run(user.id, targetId, targetId, user.id);
+
+  res.json({ success: true });
+});
+
 module.exports = router;
