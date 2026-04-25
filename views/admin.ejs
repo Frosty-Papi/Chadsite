@@ -109,13 +109,21 @@
 
           <!-- ✏️ EDIT MODE -->
           <div class="service-edit hidden">
-            <input class="edit-name" value="<%= s.name %>" />
-            <input class="edit-path" value="<%= s.path %>" />
-            <select class="edit-role">
-              <option value="user" <%= s.min_role === "user" ? "selected" : "" %>>User</option>
-              <option value="admin" <%= s.min_role === "admin" ? "selected" : "" %>>Admin</option>
-            </select>
+          <div class="field">
+            <input class="edit-name" value="<%= s.name %>" placeholder="Name" />
+            <div class="error name-error"></div>
           </div>
+
+          <div class="field">
+            <input class="edit-path" value="<%= s.path %>" placeholder="Path or URL" />
+            <div class="error path-error"></div>
+          </div>
+
+          <select class="edit-role">
+            <option value="user" <%= s.min_role === "user" ? "selected" : "" %>>User</option>
+            <option value="admin" <%= s.min_role === "admin" ? "selected" : "" %>>Admin</option>
+          </select>
+        </div>
 
           <div class="service-actions">
             <button type="button" class="secondary edit-service-btn">Edit</button>

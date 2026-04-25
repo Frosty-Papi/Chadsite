@@ -158,13 +158,17 @@ document.addEventListener("DOMContentLoaded",()=>{
         });
     }
 
-    document.querySelectorAll(".delete-service-btn").forEach(btn=>{
-        btn.addEventListener("click",async()=>{
-            if(!confirm("Delete this service?"))return;
-            await api("/admin/service/delete",{serviceId:btn.dataset.id});
-            location.reload();
-        });
-    });
+    if (btn.classList.contains("delete-service-btn")) {
+        if (!confirm("Delete this service?")) return;
+
+        try {
+            await api("/admin/service/delete", { serviceId: btn.dataset.id });
+            row.remove();
+            showToast("Service deleted");
+        } catch {
+            showToast("Delete failed", "error");
+        }
+    }
 
     const cu=document.getElementById("create-user-form");
     if(cu){
@@ -212,6 +216,21 @@ document.addEventListener("click", async (e) => {
 
     // ENTER EDIT MODE
     if (e.target.classList.contains("edit-service-btn")) {
+        const nameInput = row.querySelector(".edit-name");
+        const pathInput = row.querySelector(".edit-path");
+        const saveBtn = row.querySelector(".save-service-btn");
+
+        function updateValidation() {
+            const isValid = validateServiceRow(row);
+            saveBtn.disabled = !isValid;
+        }
+
+        nameInput.addEventListener("input", updateValidation);
+        pathInput.addEventListener("input", updateValidation);
+
+        // run once initially
+        updateValidation();
+
         row.querySelector(".view-mode").classList.add("hidden");
         row.querySelector(".service-edit").classList.remove("hidden");
 
@@ -232,38 +251,125 @@ document.addEventListener("click", async (e) => {
 
     // SAVE EDIT
     if (e.target.classList.contains("save-service-btn")) {
+        const btn = e.target;
         const id = row.dataset.id;
 
-        const name = row.querySelector(".edit-name").value;
-        const path = row.querySelector(".edit-path").value;
-        const min_role = row.querySelector(".edit-role").value;
+        if (!validateServiceRow(row)) return;
 
-        const res = await fetch("/admin/service/update", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "CSRF-Token": document.querySelector('input[name="_csrf"]').value
-            },
-            body: JSON.stringify({ serviceId: id, name, path, min_role })
-        });
+        btn.disabled = true;
+        btn.textContent = "Saving...";
 
-        if (!res.ok) {
-            alert("Update failed");
-            return;
+        try {
+            const res = await fetch("/admin/service/update", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "CSRF-Token": document.querySelector('input[name="_csrf"]').value
+                },
+                body: JSON.stringify({
+                    serviceId: id,
+                    name: row.querySelector(".edit-name").value,
+                                     path: row.querySelector(".edit-path").value,
+                                     min_role: row.querySelector(".edit-role").value
+                })
+            });
+
+            if (!res.ok) throw new Error();
+
+            // update UI
+            row.querySelector(".service-name").textContent = row.querySelector(".edit-name").value;
+            row.querySelector(".service-path").textContent = row.querySelector(".edit-path").value;
+            row.querySelector(".service-role").textContent = `(${row.querySelector(".edit-role").value})`;
+
+            showToast("Service updated");
+
+            // exit edit mode
+            row.querySelector(".view-mode").classList.remove("hidden");
+            row.querySelector(".service-edit").classList.add("hidden");
+
+            row.querySelector(".edit-service-btn").classList.remove("hidden");
+            row.querySelector(".save-service-btn").classList.add("hidden");
+            row.querySelector(".cancel-service-btn").classList.add("hidden");
+
+        } catch {
+            showToast("Failed to update service", "error");
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "Save";
         }
-
-        // update UI without reload
-        row.querySelector(".service-name").textContent = name;
-        row.querySelector(".service-path").textContent = path;
-        row.querySelector(".service-role").textContent = `(${min_role})`;
-
-        // exit edit mode
-        row.querySelector(".view-mode").classList.remove("hidden");
-        row.querySelector(".service-edit").classList.add("hidden");
-
-        row.querySelector(".edit-service-btn").classList.remove("hidden");
-        row.querySelector(".save-service-btn").classList.add("hidden");
-        row.querySelector(".cancel-service-btn").classList.add("hidden");
     }
 
 });
+
+function validateServiceRow(row) {
+    const nameInput = row.querySelector(".edit-name");
+    const pathInput = row.querySelector(".edit-path");
+
+    const nameError = row.querySelector(".name-error");
+    const pathError = row.querySelector(".path-error");
+
+    let valid = true;
+
+    // --- NAME ---
+    if (!nameInput.value.trim()) {
+        nameError.textContent = "Name is required";
+        nameInput.classList.add("invalid");
+        nameInput.classList.remove("valid");
+        valid = false;
+    } else {
+        nameError.textContent = "";
+        nameInput.classList.remove("invalid");
+        nameInput.classList.add("valid");
+    }
+
+    // --- PATH ---
+    const path = pathInput.value.trim();
+
+    let isValidPath = false;
+
+    // internal
+    if (/^\/[a-z0-9/_-]*$/i.test(path)) {
+        isValidPath = true;
+    }
+
+    // external
+    try {
+        const url = new URL(path);
+        if (url.protocol === "http:" || url.protocol === "https:") {
+            isValidPath = true;
+        }
+    } catch {}
+
+    if (!isValidPath) {
+        pathError.textContent = "Must be /path or https://url";
+        pathInput.classList.add("invalid");
+        pathInput.classList.remove("valid");
+        valid = false;
+    } else {
+        pathError.textContent = "";
+        pathInput.classList.remove("invalid");
+        pathInput.classList.add("valid");
+    }
+
+    return valid;
+}
+
+function showToast(message, type = "success") {
+    const container = document.getElementById("toast-container");
+    if (!container) return;
+
+    const toast = document.createElement("div");
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+
+    container.appendChild(toast);
+
+    // trigger animation
+    setTimeout(() => toast.classList.add("show"), 10);
+
+    // auto remove
+    setTimeout(() => {
+        toast.classList.remove("show");
+        setTimeout(() => toast.remove(), 200);
+    }, 2500);
+}
