@@ -5,6 +5,17 @@ const { getUser, requireLogin, isRoleAtLeast } = require("../middleware/auth");
 
 const router = express.Router();
 
+db.prepare(`
+CREATE TABLE IF NOT EXISTS play_invites (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id INTEGER,
+  sender_id INTEGER,
+  receiver_id INTEGER,
+  status TEXT DEFAULT 'pending',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+)
+`).run();
+
 function normalizeName(value) {
   return String(value || "")
     .trim()
@@ -339,6 +350,50 @@ router.post("/api/play/sessions/:sessionId/terminate", requireLogin, requirePlay
   `).run(outcome, session.id);
 
   res.json({ success: true, redirectUrl: "/play" });
+});
+
+router.post("/api/play/invite", requireLogin, (req, res) => {
+  const user = getUser(req);
+  const { sessionId, friendId } = req.body;
+
+  db.prepare(`
+  INSERT OR IGNORE INTO play_invites (session_id, sender_id, receiver_id)
+  VALUES (?, ?, ?)
+  `).run(sessionId, user.id, friendId);
+
+  res.json({ success: true });
+});
+
+router.get("/api/play/invites", requireLogin, (req, res) => {
+  const user = getUser(req);
+
+  const invites = db.prepare(`
+  SELECT i.id, s.session_key, s.title, u.username
+  FROM play_invites i
+  JOIN play_sessions s ON s.id = i.session_id
+  JOIN users u ON u.id = i.sender_id
+  WHERE i.receiver_id = ? AND i.status = 'pending'
+  `).all(user.id);
+
+  res.json({ invites });
+});
+
+router.post("/api/play/invite/respond", requireLogin, (req, res) => {
+  const user = getUser(req);
+  const { inviteId } = req.body;
+
+  const invite = db.prepare(`
+  SELECT * FROM play_invites WHERE id = ? AND receiver_id = ?
+  `).get(inviteId, user.id);
+
+  if (!invite) return res.status(404).json({ error: "Not found" });
+
+  db.prepare(`UPDATE play_invites SET status='accepted' WHERE id=?`).run(inviteId);
+
+  const session = db.prepare(`SELECT session_key FROM play_sessions WHERE id=?`)
+  .get(invite.session_id);
+
+  res.json({ redirect: `/play/session/${session.session_key}` });
 });
 
 module.exports = router;
