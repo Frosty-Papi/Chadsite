@@ -2,15 +2,33 @@ const bell = document.getElementById("notif-bell");
 const panel = document.getElementById("notif-panel");
 const list = document.getElementById("notif-list");
 
+
 bell?.addEventListener("click", () => {
     panel.classList.toggle("hidden");
 });
 
 async function loadNotifications() {
+    const bell = document.getElementById("notif-bell");
+    const list = document.getElementById("notif-list");
+
+    if (!bell || !list) return;
+
     const res = await fetch("/api/play/invites");
     const data = await res.json();
 
+    const count = document.getElementById("notif-count");
+    count.textContent = data.invites.length;
+
     list.innerHTML = "";
+
+    if (!data.invites || data.invites.length === 0) {
+        // 🔥 hide bell if no notifications
+        bell.classList.add("hidden");
+        return;
+    }
+
+    // 🔥 show bell if notifications exist
+    bell.classList.remove("hidden");
 
     data.invites.forEach(invite => {
         const li = document.createElement("li");
@@ -29,7 +47,10 @@ document.addEventListener("click", async (e) => {
 
     const res = await fetch("/api/play/invite/respond", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json",
+            "CSRF-Token": document.querySelector('input[name="_csrf"]')?.value
+        },
         body: JSON.stringify({ inviteId })
     });
 

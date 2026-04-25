@@ -278,7 +278,7 @@ router.get("/play/session/:sessionKey", requireLogin, requirePlayAccess, (req, r
     session: refreshedSession,
     members,
     currentUser: user,
-    friends: getFriendsForUser(user.id)
+    friends: getFriendsForUser(user.id) // ADD THIS
   });
 });
 

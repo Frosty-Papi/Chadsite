@@ -48,14 +48,19 @@
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <button type="submit" class="dropdown-item logout">Logout</button>
               </form>
+
             </div>
-            <div id="notif-bell" class="notif-bell">🔔</div>
+            </div>
+
+          </div>
+        <% } %>
+
+        <div id="notif-bell" class="notif-bell hidden">
+                🔔 <span id="notif-count" class="notif-count"></span>
+              </div>
             <div id="notif-panel" class="notif-panel hidden">
               <h4>Notifications</h4>
               <ul id="notif-list"></ul>
-            </div>
-          </div>
-        <% } %>
 
       </div>
 
