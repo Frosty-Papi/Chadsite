@@ -81,6 +81,10 @@ nav a {
   text-align: left;
 }
 
+.dropdown.open {
+  display: block;
+}
+
 .dropdown-item.logout {
   color: #f87171;
 }
