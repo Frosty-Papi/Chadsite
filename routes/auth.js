@@ -10,9 +10,9 @@ router.get("/login", (req, res) => {
 });
 
 router.post("/login", (req, res) => {
-  const { username, password } = req.body;
+  let { username, password } = req.body;
 
-  const username = String(req.body.username || "").trim().toLowerCase();
+  username = String(req.body.username || "").trim().toLowerCase();
   const user = db.prepare("SELECT * FROM users WHERE lower(username) = ?").get(username);
 
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
