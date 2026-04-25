@@ -1,20 +1,5 @@
 function getCSRF(){return document.querySelector('meta[name="csrf-token"]')?.content||""}
 
-async function api(url,body){
-    const res=await fetch(url,{
-        method:"POST",
-        headers:{"Content-Type":"application/json","CSRF-Token":getCSRF()},
-        body:JSON.stringify(body)
-    });
-    if(!res.ok){
-        let msg="Request failed";
-        try{const j=await res.json();msg=j.error||msg}catch{}
-        toast.error(msg);
-        throw new Error(msg);
-    }
-    return res.json().catch(()=>({}));
-}
-
 function escapeHtml(value){
     return String(value ?? "").replace(/[&<>'"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[ch]));
 }
@@ -158,18 +143,6 @@ document.addEventListener("DOMContentLoaded",()=>{
         });
     }
 
-    if (btn.classList.contains("delete-service-btn")) {
-        if (!confirm("Delete this service?")) return;
-
-        try {
-            await api("/admin/service/delete", { serviceId: btn.dataset.id });
-            row.remove();
-            showToast("Service deleted");
-        } catch {
-            showToast("Delete failed", "error");
-        }
-    }
-
     const cu=document.getElementById("create-user-form");
     if(cu){
         ensureOtpPanel();
@@ -264,7 +237,7 @@ document.addEventListener("click", async (e) => {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "CSRF-Token": document.querySelector('input[name="_csrf"]').value
+                    "CSRF-Token": getCSRF()
                 },
                 body: JSON.stringify({
                     serviceId: id,
@@ -296,6 +269,19 @@ document.addEventListener("click", async (e) => {
         } finally {
             btn.disabled = false;
             btn.textContent = "Save";
+        }
+    }
+
+    //DELETE SERVICE
+    if (e.target.classList.contains("delete-service-btn")) {
+        if (!confirm("Delete this service?")) return;
+
+        try {
+            await api("/admin/service/delete", { serviceId: row.dataset.id });
+            row.remove();
+            showToast("Service deleted");
+        } catch {
+            showToast("Delete failed", "error");
         }
     }
 
