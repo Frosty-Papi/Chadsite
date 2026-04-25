@@ -7,10 +7,9 @@ const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const csrf = require("csurf");
 const path = require("path");
-const fs = require("fs");
 
 const { enforceAccountState } = require("./middleware/auth");
-const { cleanupOrphanAvatars } = require("./jobs/cleanupAvatars");
+const initRealtime = require("./realtime");
 
 const app = express();
 
@@ -22,19 +21,20 @@ app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
-// Serve CropperJS locally
 app.use("/vendor/cropperjs", express.static(path.join(__dirname, "node_modules", "cropperjs", "dist")));
 
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
 
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
 
-app.use(session({
+const sessionMiddleware = session({
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" }
-}));
+});
+
+app.use(sessionMiddleware);
 
 const csrfProtection = csrf({ cookie: false });
 app.use(csrfProtection);
@@ -68,4 +68,8 @@ app.use("/", require("./routes/play"));
 app.get("/deck-modern", (req, res) => res.render("deck-modern"));
 app.get("/", (req, res) => res.render("index"));
 
-app.listen(3300, () => console.log("ChadBroChill running on port 3300"));
+const server = app.listen(3300, () => console.log("ChadBroChill running on port 3300"));
+
+const realtime = initRealtime(server, sessionMiddleware);
+
+module.exports = { app, realtime };
