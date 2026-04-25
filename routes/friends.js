@@ -9,25 +9,25 @@ router.get("/api/friends", requireLogin, (req, res) => {
 
   const friends = db.prepare(`
     SELECT u.id, u.username, u.display_name, u.avatar
-    FROM friendships f
-    JOIN users u ON u.id = f.friend_user_id
+    FROM friends f
+    JOIN users u ON u.id = f.friend_id
     WHERE f.user_id = ?
     ORDER BY COALESCE(u.display_name, u.username) COLLATE NOCASE
   `).all(user.id);
 
   const incoming = db.prepare(`
-    SELECT fr.id, u.id AS user_id, u.username, u.display_name
+    SELECT fr.id, u.id AS user_id, u.username, u.display_name, u.avatar
     FROM friend_requests fr
-    JOIN users u ON u.id = fr.requester_user_id
-    WHERE fr.addressee_user_id = ? AND fr.status = 'pending'
+    JOIN users u ON u.id = fr.sender_id
+    WHERE fr.receiver_id = ? AND fr.status = 'pending'
     ORDER BY fr.created_at DESC
   `).all(user.id);
 
   const outgoing = db.prepare(`
-    SELECT fr.id, u.id AS user_id, u.username, u.display_name
+    SELECT fr.id, u.id AS user_id, u.username, u.display_name, u.avatar
     FROM friend_requests fr
-    JOIN users u ON u.id = fr.addressee_user_id
-    WHERE fr.requester_user_id = ? AND fr.status = 'pending'
+    JOIN users u ON u.id = fr.receiver_id
+    WHERE fr.sender_id = ? AND fr.status = 'pending'
     ORDER BY fr.created_at DESC
   `).all(user.id);
 
@@ -36,13 +36,13 @@ router.get("/api/friends", requireLogin, (req, res) => {
 
 router.post("/api/friends/request", requireLogin, (req, res) => {
   const user = getUser(req);
-  const username = String(req.body.username || "").trim();
+  const username = String(req.body.username || "").trim().toLowerCase();
 
   if (!username) {
     return res.status(400).json({ error: "Username is required" });
   }
 
-  const target = db.prepare("SELECT id, username FROM users WHERE username = ?").get(username);
+  const target = db.prepare("SELECT id, username FROM users WHERE lower(username) = ?").get(username);
   if (!target) {
     return res.status(404).json({ error: "User not found" });
   }
@@ -52,31 +52,36 @@ router.post("/api/friends/request", requireLogin, (req, res) => {
   }
 
   const existingFriend = db.prepare(`
-    SELECT 1 FROM friendships WHERE user_id = ? AND friend_user_id = ?
+    SELECT 1 FROM friends WHERE user_id = ? AND friend_id = ?
   `).get(user.id, target.id);
   if (existingFriend) {
     return res.status(409).json({ error: "Already friends" });
   }
 
-  const reversePending = db.prepare(`
-    SELECT id FROM friend_requests
-    WHERE requester_user_id = ? AND addressee_user_id = ? AND status = 'pending'
-  `).get(target.id, user.id);
+  const existingRequest = db.prepare(`
+    SELECT id, sender_id, receiver_id, status
+    FROM friend_requests
+    WHERE (sender_id = ? AND receiver_id = ?)
+       OR (sender_id = ? AND receiver_id = ?)
+  `).get(user.id, target.id, target.id, user.id);
 
-  if (reversePending) {
-    return res.status(409).json({ error: "That user has already sent you a request" });
-  }
-
-  try {
-    db.prepare(`
-      INSERT INTO friend_requests (requester_user_id, addressee_user_id, status)
-      VALUES (?, ?, 'pending')
-    `).run(user.id, target.id);
-
-    return res.json({ success: true });
-  } catch (error) {
+  if (existingRequest && existingRequest.status === "pending") {
+    if (existingRequest.sender_id === target.id) {
+      return res.status(409).json({ error: "That user has already sent you a request" });
+    }
     return res.status(409).json({ error: "Friend request already exists" });
   }
+
+  if (existingRequest && existingRequest.status !== "pending") {
+    db.prepare("DELETE FROM friend_requests WHERE id = ?").run(existingRequest.id);
+  }
+
+  db.prepare(`
+    INSERT INTO friend_requests (sender_id, receiver_id, status)
+    VALUES (?, ?, 'pending')
+  `).run(user.id, target.id);
+
+  return res.json({ success: true });
 });
 
 router.post("/api/friends/request/:id/respond", requireLogin, (req, res) => {
@@ -86,7 +91,7 @@ router.post("/api/friends/request/:id/respond", requireLogin, (req, res) => {
   const request = db.prepare(`
     SELECT *
     FROM friend_requests
-    WHERE id = ? AND addressee_user_id = ? AND status = 'pending'
+    WHERE id = ? AND receiver_id = ? AND status = 'pending'
   `).get(req.params.id, user.id);
 
   if (!request) {
@@ -100,16 +105,16 @@ router.post("/api/friends/request/:id/respond", requireLogin, (req, res) => {
       WHERE id = ?
     `).run(action, request.id);
 
-    if (action === 'accepted') {
+    if (action === "accepted") {
       db.prepare(`
-        INSERT OR IGNORE INTO friendships (user_id, friend_user_id)
+        INSERT OR IGNORE INTO friends (user_id, friend_id)
         VALUES (?, ?)
-      `).run(request.requester_user_id, request.addressee_user_id);
+      `).run(request.sender_id, request.receiver_id);
 
       db.prepare(`
-        INSERT OR IGNORE INTO friendships (user_id, friend_user_id)
+        INSERT OR IGNORE INTO friends (user_id, friend_id)
         VALUES (?, ?)
-      `).run(request.addressee_user_id, request.requester_user_id);
+      `).run(request.receiver_id, request.sender_id);
     }
   });
 
