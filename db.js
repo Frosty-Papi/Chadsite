@@ -136,21 +136,6 @@ for (const s of services) {
   }
 }
 
-const defaultServices = [
-  { name: "Deck", path: "/deck", slug: "deck", min_role: "user", sort_order: 0 },
-  { name: "Play", path: "/play", slug: "play", min_role: "user", sort_order: 10 }
-];
-
-for (const service of defaultServices) {
-  const existing = db.prepare("SELECT id FROM services WHERE path = ?").get(service.path);
-  if (!existing) {
-    db.prepare(`
-      INSERT INTO services (name, path, slug, min_role, is_enabled, sort_order, is_external)
-      VALUES (?, ?, ?, ?, 1, ?, 0)
-    `).run(service.name, service.path, service.slug, service.min_role, service.sort_order);
-  }
-}
-
 // FRIEND SYSTEM (canonical: friends + sender/receiver requests)
 
 function recreateFriendRequestsIfNeeded() {
