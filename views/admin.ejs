@@ -1,94 +1,105 @@
+<link rel="stylesheet" href="/css/profile.css">
 <link rel="stylesheet" href="/css/admin.css">
 
-<h2>Admin Dashboard</h2>
+<div class="page-container">
+  <h2>Admin Dashboard</h2>
 
-<div class="tabs">
-  <button type="button" data-tab="users">Users</button>
-  <% if (isSuperAdmin) { %>
-    <button type="button" data-tab="services">Services</button>
-  <% } %>
-</div>
-
-<div id="tab-users" class="tab">
-  <input id="search" placeholder="Search users..." />
-
-  <table>
-    <thead>
-      <tr>
-        <th>Username</th>
-        <th>Role</th>
-        <th>Status</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="user-table">
-      <% users.forEach(u => { %>
-        <tr data-name="<%= (u.username || '').toLowerCase() %>">
-          <td><%= u.username %></td>
-          <td>
-            <% if (isSuperAdmin) { %>
-              <select class="role-select" data-id="<%= u.id %>">
-                <option value="user" <%= u.role === "user" ? "selected" : "" %>>User</option>
-                <option value="admin" <%= u.role === "admin" ? "selected" : "" %>>Admin</option>
-              </select>
-            <% } else { %>
-              <%= u.role %>
-            <% } %>
-          </td>
-          <td>
-            <% if (u.is_disabled) { %>
-              Disabled
-            <% } else if (u.must_reset_password) { %>
-              Reset Required
-            <% } else { %>
-              Active
-            <% } %>
-          </td>
-          <td class="actions-cell">
-            <button type="button" class="disable-btn" data-id="<%= u.id %>">Disable</button>
-            <button type="button" class="enable-btn" data-id="<%= u.id %>">Enable</button>
-            <button type="button" class="reset-btn" data-id="<%= u.id %>">Reset PW</button>
-            <button type="button" class="force-reset-btn" data-id="<%= u.id %>">Force Reset</button>
-            <% if (isSuperAdmin) { %>
-              <button type="button" class="delete-btn" data-id="<%= u.id %>">Delete</button>
-            <% } %>
-          </td>
-        </tr>
-      <% }) %>
-    </tbody>
-  </table>
-
-  <% if (isSuperAdmin) { %>
-    <h3>Create User</h3>
-    <form id="create-user-form">
-      <input name="username" placeholder="Username" required />
-      <input name="password" type="password" placeholder="Password" required />
-      <button type="submit">Create</button>
-    </form>
-  <% } %>
-</div>
-
-<% if (isSuperAdmin) { %>
-  <div id="tab-services" class="tab hidden">
-    <h3>Services</h3>
-
-    <% services.forEach(s => { %>
-      <div class="service-row">
-        <span><%= s.name %> (<%= s.min_role %>)</span>
-        <button type="button" class="delete-service-btn" data-id="<%= s.id %>">Delete</button>
-      </div>
-    <% }) %>
-
-    <form id="create-service-form">
-      <input name="name" placeholder="Name" required />
-      <input name="path" placeholder="Path" required />
-      <select name="min_role">
-        <option value="user">User</option>
-        <option value="admin">Admin</option>
-      </select>
-      <button type="submit">Add</button>
-    </form>
+  <div class="profile-panel">
+    <div class="tabs">
+      <button type="button" data-tab="users" class="active">Users</button>
+      <% if (isSuperAdmin) { %>
+        <button type="button" data-tab="services">Services</button>
+      <% } %>
+    </div>
   </div>
-<% } %>
+
+  <div id="tab-users" class="profile-panel tab">
+    <div class="stack-form compact-form">
+      <input id="search" placeholder="Search users..." />
+    </div>
+
+    <div class="table-container">
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="user-table">
+          <% users.forEach(u => { %>
+            <tr data-name="<%= (u.username || '').toLowerCase() %>">
+              <td><%= u.username %></td>
+              <td>
+                <% if (isSuperAdmin) { %>
+                  <select class="role-select" data-id="<%= u.id %>">
+                    <option value="user" <%= u.role === "user" ? "selected" : "" %>>User</option>
+                    <option value="admin" <%= u.role === "admin" ? "selected" : "" %>>Admin</option>
+                  </select>
+                <% } else { %>
+                  <%= u.role %>
+                <% } %>
+              </td>
+              <td>
+                <% if (u.is_disabled) { %>
+                  Disabled
+                <% } else if (u.must_reset_password) { %>
+                  Reset Required
+                <% } else { %>
+                  Active
+                <% } %>
+              </td>
+              <td class="actions-cell">
+                <button type="button" class="secondary disable-btn" data-id="<%= u.id %>">Disable</button>
+                <button type="button" class="secondary enable-btn" data-id="<%= u.id %>">Enable</button>
+                <button type="button" class="secondary reset-btn" data-id="<%= u.id %>">Reset PW</button>
+                <button type="button" class="secondary force-reset-btn" data-id="<%= u.id %>">Force Reset</button>
+                <% if (isSuperAdmin) { %>
+                  <button type="button" class="secondary delete-btn" data-id="<%= u.id %>">Delete</button>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <% if (isSuperAdmin) { %>
+      <div class="profile-panel">
+        <h3>Create User</h3>
+        <form id="create-user-form" class="stack-form">
+          <input name="username" placeholder="Username" required />
+          <input name="password" type="password" placeholder="Password" required />
+          <button type="submit">Create</button>
+        </form>
+      </div>
+    <% } %>
+  </div>
+
+  <% if (isSuperAdmin) { %>
+    <div id="tab-services" class="profile-panel tab hidden">
+      <h3>Services</h3>
+
+      <% services.forEach(s => { %>
+        <div class="service-row">
+          <span><%= s.name %> (<%= s.min_role %>)</span>
+          <button type="button" class="secondary delete-service-btn" data-id="<%= s.id %>">Delete</button>
+        </div>
+      <% }) %>
+
+      <form id="create-service-form" class="stack-form">
+        <input name="name" placeholder="Name" required />
+        <input name="path" placeholder="Path" required />
+        <select name="min_role">
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button type="submit">Add</button>
+      </form>
+    </div>
+  <% } %>
+</div>
 
 <script src="/js/admin.js"></script>
