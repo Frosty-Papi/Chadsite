@@ -199,7 +199,7 @@ new Vue({
             try {
                 data = this.buildData()
             } catch (error) {
-                this.showRedAlert("Export failure: Invalid data.\n Please make sure that a class is defined.")
+                this.showRedtoast.error("Export failure: Invalid data.\n Please make sure that a class is defined.")
                 return;
             }
             
@@ -221,9 +221,9 @@ new Vue({
                 try {
                     var data = JSON.parse(value)                
                     this.loadData(JSON.parse(value))    
-                    this.showGreenAlert("Import success.")
+                    this.showGreentoast.error("Import success.")
                 } catch (error) {
-                    this.showRedAlert("Could not import data file.")
+                    this.showRedtoast.error("Could not import data file.")
                 }                                
             })            
         },
@@ -251,7 +251,7 @@ new Vue({
                 this.saveGamePlayData()
             }
 
-            this.showGreenAlert("Data saved!")
+            this.showGreentoast.error("Data saved!")
         },
         buildCookieData: function() {
             var data = new Object();

@@ -350,7 +350,7 @@ function importStateFile(file) {
       window.location.reload();
     } catch (error) {
       console.error(error);
-      toast.error('Could not import data file.');
+      showToast('Could not import data file.', "error");
     }
   });
 }
@@ -710,7 +710,7 @@ function addAbility(card) {
       state.abilitiesChosen.push(card);
       state.cardsInHand.push(card);
     } else {
-      toast.error('You have selected the maximum number of ability cards this class can take into battle.');
+      showToast('You have selected the maximum number of ability cards this class can take into battle.', "error");
     }
   } else {
     removeAbility(card);
@@ -768,7 +768,7 @@ function initShortRest() {
 
 function initLongRest() {
   if (state.cardsDiscarded.length < 2) {
-    toast.error('You need at least 2 discarded cards to long rest.');
+    showToast('You need at least 2 discarded cards to long rest.', "error");
     return;
   }
 
@@ -821,7 +821,7 @@ function longRest() {
   closeModal();
 
   if (state.cardsInHand.length < 2) {
-    toast.error('You do not have enough cards in your hand to continue.');
+    showToast('You do not have enough cards in your hand to continue.', "error");
   }
   render();
 }
@@ -931,9 +931,9 @@ function updateOnBoardCards() {
 function play() {
   if (state.twoAbilitiesSelected.length !== 2) {
     if (state.abilitiesChosen.length === 0) {
-      toast.error('You need to build you deck in the Abilities section.');
+      showToast('You need to build you deck in the Abilities section.', "error");
     } else {
-      toast.error('You have to select two cards.');
+      showToast('You have to select two cards.', "error");
     }
     return;
   }
@@ -1221,7 +1221,7 @@ function addItemById(idRaw) {
     });
   });
   if (!found) {
-    toast.error('Invalid ID');
+    showToast('Invalid ID', "error");
   }
 }
 
@@ -1914,7 +1914,7 @@ function bindEvents() {
 
   document.getElementById('saveDataNav')?.addEventListener('click', () => {
     saveAllState();
-    toast.error('Data saved!');
+    showToast('Data saved!');
   });
 
   document.querySelectorAll('[data-class]').forEach(btn =>
@@ -2140,7 +2140,7 @@ function bindEvents() {
         rest();
         closeModal();
         if (state.cardsInHand.length < 2) {
-          toast.error('You do not have enough cards in your hand to continue.');
+          showToast('You do not have enough cards in your hand to continue.', "error");
         }
         render();
       });
@@ -2156,7 +2156,7 @@ function bindEvents() {
 
       document.getElementById('confirmLongRest')?.addEventListener('click', () => {
         if (!state.cardToLose) {
-          toast.error('Select a card to lose.');
+          showToast('Select a card to lose.');
           return;
         }
         longRest();

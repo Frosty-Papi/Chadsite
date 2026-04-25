@@ -222,7 +222,7 @@ router.post("/admin/service", requireSuperAdmin, (req, res) => {
   const is_external = isExternal ? 1 : 0;
 
   if (!name || !path) {
-    return res.status(400).json({ error: "Missing fields" });
+    return;
   }
 
   if (!is_external && !/^\/[a-z0-9/_-]*$/i.test(path)) {

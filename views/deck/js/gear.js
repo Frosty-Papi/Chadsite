@@ -42,7 +42,7 @@ var gearManagement = {
 
         },
         gearAlert: function(message) {
-            showGreenAlert(message)
+            showGreentoast.error(message)
         },
         removeGear: function(item) {
             var indexOfItemToRemove = this.gearChosen.indexOf(item)
@@ -87,7 +87,7 @@ var gearManagement = {
                 }
             }))
             if(!found) {
-                this.showRedAlert('Invalid ID')
+                this.showRedtoast.error('Invalid ID')
             }
             this.idToAdd = ""
         },

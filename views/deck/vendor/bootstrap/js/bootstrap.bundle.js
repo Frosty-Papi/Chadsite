@@ -257,7 +257,7 @@
   var Alert =
   /*#__PURE__*/
   function () {
-    function Alert(element) {
+    function toast.error(element) {
       this._element = element;
     } // Getters
 
@@ -336,7 +336,7 @@
         var data = $element.data(DATA_KEY);
 
         if (!data) {
-          data = new Alert(this);
+          data = new toast.error(this);
           $element.data(DATA_KEY, data);
         }
 
@@ -372,7 +372,7 @@
    */
 
 
-  $(document).on(Event.CLICK_DATA_API, Selector.DISMISS, Alert._handleDismiss(new Alert()));
+  $(document).on(Event.CLICK_DATA_API, Selector.DISMISS, Alert._handleDismiss(new toast.error()));
   /**
    * ------------------------------------------------------------------------
    * jQuery

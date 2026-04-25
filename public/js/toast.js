@@ -1,4 +1,16 @@
 (function () {
+
+    function normalize(message) {
+        if (message === true || message === "true") return "Success";
+        if (message === false) return "Failed";
+
+        if (typeof message === "object") {
+            return message?.message || JSON.stringify(message);
+        }
+
+        return String(message);
+    }
+
     function show(message, type = "success", duration = 2500) {
         const container = document.getElementById("toast-container");
         if (!container) return;
@@ -12,7 +24,7 @@
             info: "ℹ"
         }[type] || "";
 
-        toast.textContent = `${icon} ${message}`;
+        toast.textContent = `${icon} ${normalize(message)}`;
 
         container.appendChild(toast);
 
@@ -26,10 +38,9 @@
         }, duration);
     }
 
-    // expose globally
+    // LOW-LEVEL ONLY
     window.toast = {
-        success: (msg) => show(msg, "success"),
- error: (msg) => show(msg, "error"),
- info: (msg) => show(msg, "info")
+        _show: show
     };
+
 })();

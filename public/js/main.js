@@ -1,10 +1,10 @@
-window.alert = (msg) => {
+/*window.alert = (msg) => {
     if (String(msg).toLowerCase().includes("success")) {
         toast.success(msg);
     } else {
-        toast.error(msg);
+        showToast(msg);
     }
-};
+};*/
 
 document.addEventListener("DOMContentLoaded", () => {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
@@ -132,3 +132,13 @@ document.addEventListener("DOMContentLoaded", () => {
     loadNotifications();
     setInterval(loadNotifications, 10000);
 });
+
+function showToast(message, type = "success") {
+    if (!message) return;
+
+    if (window.toast && window.toast._show) {
+        window.toast._show(message, type);
+    } else {
+        console.log(`[${type}]`, message);
+    }
+}

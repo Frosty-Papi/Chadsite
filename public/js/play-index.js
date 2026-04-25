@@ -99,7 +99,7 @@ document.querySelectorAll(".tab-btn").forEach((button) => {
 document.getElementById("host-game-form")?.addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  if (!selectedGame) return toast.error("Select a game");
+  if (!selectedGame) return toast.error("Select a game", "error");
 
   const vis = document.getElementById("host-visibility")?.value || "public";
 
@@ -116,7 +116,7 @@ document.getElementById("host-game-form")?.addEventListener("submit", async (e) 
   const data = await parseJsonSafely(res);
 
   if (!res.ok) {
-    toast.error(data.error || "Failed to create lobby");
+    showToast(data.error || "Failed to create lobby", "error");
     if (data.redirectUrl) location.href = data.redirectUrl;
     return;
   }
@@ -145,7 +145,7 @@ document.getElementById("new-game-form")?.addEventListener("submit", async (e) =
 
   const data = await parseJsonSafely(res);
   if (!res.ok) {
-    toast.error(data.error || "Failed to create game entry");
+    showToast(data.error || "Failed to create game entry", "error");
     return;
   }
 

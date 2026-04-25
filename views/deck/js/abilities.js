@@ -151,7 +151,7 @@ var abilitiesManagement = {
                     this.abilitiesChosen.push(card)
                     this.cardsInHand.push(card)
                 } else {
-                    this.showRedAlert('You have selected the maximum number of ability cards this class can take into battle.')
+                    this.showRedtoast.error('You have selected the maximum number of ability cards this class can take into battle.')
                 }
             } else {
                 this.removeAbility(card)
@@ -251,7 +251,7 @@ var abilitiesManagement = {
             $('#longRestModal').modal('hide')
 
             if (this.cardsInHand.length <2) {
-                this.showRedAlert('You do not have enough cards in your hand to continue.')
+                this.showRedtoast.error('You do not have enough cards in your hand to continue.')
             }
             this.$forceUpdate()
         },
@@ -361,9 +361,9 @@ var abilitiesManagement = {
         play: function() {
             if (this.twoAbilitiesSelected.length != 2) {
                 if(this.abilitiesChosen.length == 0) {
-                    this.showRedAlert('You need to build you deck in the Abilities section.')
+                    this.showRedtoast.error('You need to build you deck in the Abilities section.')
                 } else {
-                    this.showRedAlert('You have to select two cards.')
+                    this.showRedtoast.error('You have to select two cards.')
                 }
             } else {
                 this.twoAbilitiesSelected.forEach(card => {

@@ -85,11 +85,11 @@ document.getElementById('save-config-btn')?.addEventListener('click', async () =
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    toast.error(data.error || 'Failed to save configuration');
+    showToast(data.error || 'Failed to save configuration', "error");
     return;
   }
 
-  toast.error('Saved');
+  showToast('Saved');
 });
 
 document.getElementById('play-setup-form')?.addEventListener('submit', async (e) => {
@@ -116,7 +116,7 @@ document.getElementById('play-setup-form')?.addEventListener('submit', async (e)
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    toast.error(data.error || 'Failed to start session');
+    showToast(data.error || 'Failed to start session', "error");
     return;
   }
 

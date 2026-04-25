@@ -18,20 +18,20 @@ window.api = async function (url, body = {}, options = {}) {
         // ❌ ERROR HANDLING
         if (!res.ok) {
             const msg = data.error || options.error || "Request failed";
-            if (!options.silent) toast.error(msg);
+            if (!options.silent) showToast(msg);
             throw new Error(msg);
         }
 
         // ✅ SUCCESS HANDLING
         if (options.success) {
-            toast.success(options.success);
+            showToast("Success");
         }
 
         return data;
 
     } catch (err) {
         if (!options.silent) {
-            toast.error(err.message || "Network error");
+            showToast(err.message || "Network error", "error");
         }
         throw err;
     }
@@ -51,16 +51,16 @@ window.fetch = async (...args) => {
 
         if (!res.ok) {
             const msg = data.error || "Request failed";
-            toast.error(msg);
+            showToast(msg, "error");
         } else if (data.success) {
             // Only show success if backend sends it
-            toast.success(data.success);
+            showToast("Success");
         }
 
         return res;
 
     } catch (err) {
-        toast.error("Network error");
+        showToast("Network error", "error");
         throw err;
     }
 };
