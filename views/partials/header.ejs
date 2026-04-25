@@ -23,7 +23,8 @@
           <a href="/login" class="login-btn">Login</a>
         <% } else { %>
           <div class="profile-menu">
-            <button type="button" class="profile-trigger" aria-haspopup="menu" aria-expanded="false">
+
+            <button type="button" class="profile-trigger">
               <% if (user.avatar) { %>
                 <img src="<%= user.avatar %>" class="avatar-img" />
               <% } else { %>
@@ -37,7 +38,7 @@
               </span>
             </button>
 
-            <div id="profile-dropdown" class="dropdown" role="menu" aria-hidden="true">
+            <div id="profile-dropdown" class="dropdown">
               <a href="/profile" class="dropdown-item">Profile</a>
 
               <% if (user.role === "admin" || user.role === "super_admin") { %>
@@ -48,20 +49,24 @@
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <button type="submit" class="dropdown-item logout">Logout</button>
               </form>
-
-            </div>
             </div>
 
           </div>
         <% } %>
 
-        <div id="notif-bell" class="notif-bell hidden">
-          🔔 <span id="notif-count" class="notif-count"></span>
-        </div>
-        <div id="notif-panel" class="notif-panel hidden">
-          <h4>Notifications</h4>
-          <ul id="notif-list"></ul>
-        </div>
+        <!-- 🔔 Notifications INSIDE auth-area -->
+        <% if (user) { %>
+          <div id="notif-bell" class="notif-bell hidden">
+            🔔 <span id="notif-count" class="notif-count"></span>
+          </div>
+
+          <div id="notif-panel" class="notif-panel hidden">
+            <h4>Notifications</h4>
+            <ul id="notif-list"></ul>
+          </div>
+        <% } %>
+
+      </div>
 
     </nav>
 

@@ -118,3 +118,8 @@ nav a {
   font-size: 12px;
   margin-left: 4px;
 }
+
+.notif-unread {
+  font-weight: bold;
+  background: rgba(255,255,255,0.05);
+}
