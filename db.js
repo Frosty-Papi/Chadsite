@@ -132,81 +132,80 @@ for (const s of services) {
   }
 }
 
-// FRIEND REQUESTS
+// FRIEND SYSTEM (CANONICAL)
 
 db.prepare(`
 CREATE TABLE IF NOT EXISTS friend_requests (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  requester_user_id INTEGER NOT NULL,
-  addressee_user_id INTEGER NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted','rejected','cancelled')),
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(requester_user_id, addressee_user_id),
-  FOREIGN KEY (requester_user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (addressee_user_id) REFERENCES users(id) ON DELETE CASCADE,
-  CHECK (requester_user_id != addressee_user_id)
+  sender_id INTEGER NOT NULL,
+  receiver_id INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending'
+  CHECK(status IN ('pending','accepted','rejected','cancelled')),
+                                            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                            UNIQUE(sender_id, receiver_id),
+                                            FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+                                            FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+                                            CHECK (sender_id != receiver_id)
 )
 `).run();
 
-const friendRequestCols = db.prepare(`PRAGMA table_info(friend_requests)`).all();
-const hasRequester = friendRequestCols.some(c => c.name === "requester_user_id");
-const hasSender = friendRequestCols.some(c => c.name === "sender_id");
+db.prepare(`
+CREATE TABLE IF NOT EXISTS friends (
+  user_id INTEGER NOT NULL,
+  friend_id INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, friend_id),
+                                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                                    FOREIGN KEY (friend_id) REFERENCES users(id) ON DELETE CASCADE,
+                                    CHECK (user_id != friend_id)
+)
+`).run();
 
-if (!hasRequester && hasSender) {
+// MIGRATE OLD friend_requests (requester/addressee → sender/receiver)
+
+const frCols = db.prepare(`PRAGMA table_info(friend_requests)`).all();
+const hasOldFR = frCols.some(c => c.name === "requester_user_id");
+
+if (hasOldFR) {
   db.transaction(() => {
     db.prepare(`ALTER TABLE friend_requests RENAME TO friend_requests_old`).run();
 
     db.prepare(`
     CREATE TABLE friend_requests (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      requester_user_id INTEGER NOT NULL,
-      addressee_user_id INTEGER NOT NULL,
+      sender_id INTEGER NOT NULL,
+      receiver_id INTEGER NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending'
       CHECK(status IN ('pending','accepted','rejected','cancelled')),
                                   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                  UNIQUE(requester_user_id, addressee_user_id),
-                                  FOREIGN KEY (requester_user_id) REFERENCES users(id) ON DELETE CASCADE,
-                                  FOREIGN KEY (addressee_user_id) REFERENCES users(id) ON DELETE CASCADE,
-                                  CHECK (requester_user_id != addressee_user_id)
+                                  UNIQUE(sender_id, receiver_id)
     )
     `).run();
 
     db.prepare(`
-    INSERT OR IGNORE INTO friend_requests (
-      id,
-      requester_user_id,
-      addressee_user_id,
-      status,
-      created_at,
-      updated_at
-    )
-    SELECT
-    id,
-    sender_id,
-    receiver_id,
-    status,
-    COALESCE(created_at, CURRENT_TIMESTAMP),
-               COALESCE(updated_at, CURRENT_TIMESTAMP)
-               FROM friend_requests_old
-               `).run();
+    INSERT INTO friend_requests (id, sender_id, receiver_id, status, created_at, updated_at)
+    SELECT id, requester_user_id, addressee_user_id, status, created_at, updated_at
+    FROM friend_requests_old
+    `).run();
 
-               db.prepare(`DROP TABLE friend_requests_old`).run();
+    db.prepare(`DROP TABLE friend_requests_old`).run();
   })();
 }
 
-db.prepare(`
-CREATE TABLE IF NOT EXISTS friendships (
-  user_id INTEGER NOT NULL,
-  friend_user_id INTEGER NOT NULL,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (user_id, friend_user_id),
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (friend_user_id) REFERENCES users(id) ON DELETE CASCADE,
-  CHECK (user_id != friend_user_id)
-)
-`).run();
+const hasFriendships = db.prepare(`
+SELECT name FROM sqlite_master WHERE type='table' AND name='friendships'
+`).get();
+
+if (hasFriendships) {
+  db.prepare(`
+  INSERT OR IGNORE INTO friends (user_id, friend_id)
+  SELECT user_id, friend_user_id FROM friendships
+  `).run();
+
+  db.prepare(`DROP TABLE friendships`).run();
+}
 
 // PLAY GAMES CATALOG
 
