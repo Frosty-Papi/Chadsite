@@ -71,5 +71,6 @@ app.get("/", (req, res) => res.render("index"));
 const server = app.listen(3300, () => console.log("ChadBroChill running on port 3300"));
 
 const realtime = initRealtime(server, sessionMiddleware);
+app.set("realtime", realtime);
 
 module.exports = { app, realtime };
