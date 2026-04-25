@@ -119,4 +119,27 @@ router.post("/api/friends/remove", requireLogin, (req, res) => {
   res.json({ success: true });
 });
 
+router.get("/api/notifications", requireLogin, (req, res) => {
+  const user = getUser(req);
+
+  const invites = db.prepare(`
+  SELECT i.id, 'invite' AS type, s.title, u.username
+  FROM play_invites i
+  JOIN play_sessions s ON s.id = i.session_id
+  JOIN users u ON u.id = i.sender_id
+  WHERE i.receiver_id = ? AND i.status = 'pending'
+  `).all(user.id);
+
+  const requests = db.prepare(`
+  SELECT fr.id, 'friend_request' AS type, u.username
+  FROM friend_requests fr
+  JOIN users u ON u.id = fr.sender_id
+  WHERE fr.receiver_id = ? AND fr.status = 'pending'
+  `).all(user.id);
+
+  res.json({
+    notifications: [...invites, ...requests]
+  });
+});
+
 module.exports = router;

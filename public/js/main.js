@@ -13,29 +13,40 @@ async function loadNotifications() {
 
     if (!bell || !list) return;
 
-    const res = await fetch("/api/play/invites");
-    const data = await res.json();
+    const res = await fetch("/api/notifications");
+    if (!res.ok) return;
 
-    const count = document.getElementById("notif-count");
-    count.textContent = data.invites.length;
+    const data = await res.json();
+    const notifications = data.notifications || [];
 
     list.innerHTML = "";
 
-    if (!data.invites || data.invites.length === 0) {
-        // 🔥 hide bell if no notifications
+    if (notifications.length === 0) {
         bell.classList.add("hidden");
         return;
     }
 
-    // 🔥 show bell if notifications exist
     bell.classList.remove("hidden");
 
-    data.invites.forEach(invite => {
+    notifications.sort((a, b) => b.id - a.id);
+
+    notifications.forEach(n => {
         const li = document.createElement("li");
-        li.innerHTML = `
-        ${invite.username} invited you to ${invite.title}
-        <button data-id="${invite.id}" class="acceptInvite">Join</button>
-        `;
+
+        if (n.type === "invite") {
+            li.innerHTML = `
+            ${n.username} invited you to ${n.title}
+            <button data-id="${n.id}" class="acceptInvite">Join</button>
+            `;
+        }
+
+        if (n.type === "friend_request") {
+            li.innerHTML = `
+            ${n.username} sent you a friend request
+            <button data-id="${n.id}" class="acceptFriend">Accept</button>
+            `;
+        }
+
         list.appendChild(li);
     });
 }
@@ -83,4 +94,21 @@ document.addEventListener("DOMContentLoaded", () => {
             dropdown.style.display = "none";
         }
     });
+});
+
+document.addEventListener("click", async (e) => {
+    if (e.target.classList.contains("acceptFriend")) {
+        const id = e.target.dataset.id;
+
+        await fetch("/api/profile/friends/respond", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "CSRF-Token": document.querySelector('input[name="_csrf"]').value
+            },
+            body: JSON.stringify({ requestId: id, action: "accept" })
+        });
+
+        loadNotifications();
+    }
 });
