@@ -94,3 +94,21 @@
     display: flex;
     gap: 6px;
 }
+
+.service-edit {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.service-edit input,
+.service-edit select {
+    padding: 4px;
+    background: #020617;
+    border: 1px solid #334155;
+    color: #e2e8f0;
+}
+
+.hidden {
+    display: none;
+}

@@ -205,31 +205,65 @@ document.addEventListener("DOMContentLoaded",()=>{
 
 });
 
-document.addEventListener("click", (e) => {
-    if (!e.target.classList.contains("edit-service-btn")) return;
+document.addEventListener("click", async (e) => {
 
-    const btn = e.target;
+    const row = e.target.closest(".service-row");
+    if (!row) return;
 
-    const name = prompt("Service Name:", btn.dataset.name);
-    if (!name) return;
+    // ENTER EDIT MODE
+    if (e.target.classList.contains("edit-service-btn")) {
+        row.querySelector(".view-mode").classList.add("hidden");
+        row.querySelector(".service-edit").classList.remove("hidden");
 
-    const path = prompt("Service Path/URL:", btn.dataset.path);
-    if (!path) return;
+        row.querySelector(".edit-service-btn").classList.add("hidden");
+        row.querySelector(".save-service-btn").classList.remove("hidden");
+        row.querySelector(".cancel-service-btn").classList.remove("hidden");
+    }
 
-    const min_role = prompt("Role (user/admin):", btn.dataset.role);
-    if (!min_role) return;
+    // CANCEL EDIT
+    if (e.target.classList.contains("cancel-service-btn")) {
+        row.querySelector(".view-mode").classList.remove("hidden");
+        row.querySelector(".service-edit").classList.add("hidden");
 
-    fetch("/admin/service/update", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "CSRF-Token": document.querySelector('input[name="_csrf"]').value
-        },
-        body: JSON.stringify({
-            serviceId: btn.dataset.id,
-            name,
-            path,
-            min_role
-        })
-    }).then(() => location.reload());
+        row.querySelector(".edit-service-btn").classList.remove("hidden");
+        row.querySelector(".save-service-btn").classList.add("hidden");
+        row.querySelector(".cancel-service-btn").classList.add("hidden");
+    }
+
+    // SAVE EDIT
+    if (e.target.classList.contains("save-service-btn")) {
+        const id = row.dataset.id;
+
+        const name = row.querySelector(".edit-name").value;
+        const path = row.querySelector(".edit-path").value;
+        const min_role = row.querySelector(".edit-role").value;
+
+        const res = await fetch("/admin/service/update", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "CSRF-Token": document.querySelector('input[name="_csrf"]').value
+            },
+            body: JSON.stringify({ serviceId: id, name, path, min_role })
+        });
+
+        if (!res.ok) {
+            alert("Update failed");
+            return;
+        }
+
+        // update UI without reload
+        row.querySelector(".service-name").textContent = name;
+        row.querySelector(".service-path").textContent = path;
+        row.querySelector(".service-role").textContent = `(${min_role})`;
+
+        // exit edit mode
+        row.querySelector(".view-mode").classList.remove("hidden");
+        row.querySelector(".service-edit").classList.add("hidden");
+
+        row.querySelector(".edit-service-btn").classList.remove("hidden");
+        row.querySelector(".save-service-btn").classList.add("hidden");
+        row.querySelector(".cancel-service-btn").classList.add("hidden");
+    }
+
 });

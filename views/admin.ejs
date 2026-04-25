@@ -96,9 +96,10 @@
         <h3>Services</h3>
 
         <% services.forEach(s => { %>
-          <div class="service-row">
-          <div class="service-info">
-            <strong><%= s.name %></strong>
+          <div class="service-row" data-id="<%= s.id %>">
+
+          <div class="service-info view-mode">
+            <strong class="service-name"><%= s.name %></strong>
 
             <div class="service-meta">
               <span class="service-path"><%= s.path %></span>
@@ -106,22 +107,23 @@
             </div>
           </div>
 
-          <div class="service-actions">
-            <button type="button"
-                    class="secondary edit-service-btn"
-                    data-id="<%= s.id %>"
-                    data-name="<%= s.name %>"
-                    data-path="<%= s.path %>"
-                    data-role="<%= s.min_role %>">
-              Edit
-            </button>
-
-            <button type="button"
-                    class="secondary delete-service-btn"
-                    data-id="<%= s.id %>">
-              Delete
-            </button>
+          <!-- ✏️ EDIT MODE -->
+          <div class="service-edit hidden">
+            <input class="edit-name" value="<%= s.name %>" />
+            <input class="edit-path" value="<%= s.path %>" />
+            <select class="edit-role">
+              <option value="user" <%= s.min_role === "user" ? "selected" : "" %>>User</option>
+              <option value="admin" <%= s.min_role === "admin" ? "selected" : "" %>>Admin</option>
+            </select>
           </div>
+
+          <div class="service-actions">
+            <button type="button" class="secondary edit-service-btn">Edit</button>
+            <button type="button" class="secondary save-service-btn hidden">Save</button>
+            <button type="button" class="secondary cancel-service-btn hidden">Cancel</button>
+            <button type="button" class="secondary delete-service-btn" data-id="<%= s.id %>">Delete</button>
+          </div>
+
         </div>
         <% }) %>
       </div>
