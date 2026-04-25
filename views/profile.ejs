@@ -1,51 +1,48 @@
 <link rel="stylesheet" href="/css/profile.css">
-<<<<<<< Updated upstream
 <link rel="stylesheet" href="/vendor/cropperjs/cropper.min.css">
-=======
->>>>>>> Stashed changes
 
 <h2>My Profile</h2>
 
 <div class="profile-grid">
-    <div class="profile-card">
-      <div class="profile-identity">
-        <div class="avatar">
-          <% if (user.avatar) { %>
-            <img src="<%= user.avatar %>" />
-          <% } else { %>
-            <div class="fallback"><%= (user.display_name || user.username).charAt(0).toUpperCase() %></div>
-          <% } %>
-        </div>
-
-        <div class="identity-text">
-          <div class="identity-label">Username</div>
-          <div class="identity-username">@<%= user.username %></div>
-        </div>
+  <div class="profile-card">
+    <div class="profile-identity">
+      <div class="avatar">
+        <% if (user.avatar) { %>
+          <img src="<%= user.avatar %>" />
+        <% } else { %>
+          <div class="fallback"><%= (user.display_name || user.username).charAt(0).toUpperCase() %></div>
+        <% } %>
       </div>
 
-      <form method="POST" action="/profile/update" class="stack-form">
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-
-        <label>Display Name</label>
-        <input name="display_name" value="<%= user.display_name || '' %>" />
-
-        <button type="submit">Save</button>
-      </form>
-
-      <div class="stack-form avatar-form avatar-upload">
-        <label>Profile Picture</label>
-        <input type="file" id="avatarInput" accept="image/*">
-
-        <div id="avatarCropper" class="avatar-cropper hidden">
-          <img id="avatarPreview" alt="Avatar preview">
-          <div class="avatar-actions">
-            <button type="button" id="saveAvatar">Save</button>
-            <button type="button" id="cancelAvatar" class="secondary">Cancel</button>
-          </div>
-          <div id="avatarStatus" class="avatar-status"></div>
-        </div>
+      <div class="identity-text">
+        <div class="identity-label">Username</div>
+        <div class="identity-username">@<%= user.username %></div>
       </div>
     </div>
+
+    <form method="POST" action="/profile/update" class="stack-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <label>Display Name</label>
+      <input name="display_name" value="<%= user.display_name || '' %>" />
+
+      <button type="submit">Save</button>
+    </form>
+
+    <div class="stack-form avatar-form avatar-upload">
+      <label>Profile Picture</label>
+      <input type="file" id="avatarInput" accept="image/*">
+
+      <div id="avatarCropper" class="avatar-cropper hidden">
+        <img id="avatarPreview" alt="Avatar preview">
+        <div class="avatar-actions">
+          <button type="button" id="saveAvatar">Save</button>
+          <button type="button" id="cancelAvatar" class="secondary">Cancel</button>
+        </div>
+        <div id="avatarStatus" class="avatar-status"></div>
+      </div>
+    </div>
+  </div>
 
   <section class="profile-panel friends-panel">
     <h3>Friends</h3>
@@ -66,12 +63,12 @@
 
     <div id="friends-tab-list" class="friends-tab-panel active">
       <div class="friends-box">
-        <ul class="friends-list">
+        <ul class="friends-list" id="friends-list">
           <% if (!friends.length) { %>
             <li class="muted">No friends yet.</li>
           <% } %>
           <% friends.forEach(friend => { %>
-            <li class="friend-row">
+            <li class="friend-row" data-user-id="<%= friend.id %>">
               <div class="friend-person">
                 <% if (friend.avatar) { %>
                   <img class="friend-avatar" src="<%= friend.avatar %>" alt="">
@@ -85,6 +82,7 @@
                   <span>@<%= friend.username %></span>
                 </div>
               </div>
+              <button class="remove-friend-btn secondary">Remove</button>
             </li>
           <% }) %>
         </ul>
