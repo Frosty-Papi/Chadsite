@@ -1,8 +1,48 @@
 .tab.hidden{display:none}
-table{width:100%;border-collapse:collapse}
-th,td{padding:8px;border-bottom:1px solid #1e293b}
-.actions-cell button{margin-right:4px}
-.service-row{display:flex;justify-content:space-between;margin-bottom:6px}
+
+.table-container{
+  overflow-x:auto;
+}
+
+.styled-table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.styled-table th,
+.styled-table td{
+  padding:10px;
+  border-bottom:1px solid #334155;
+}
+
+.actions-cell button{
+  margin-right:6px;
+}
+
+.service-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:6px 0;
+}
+
+.tabs{
+  display:flex;
+  gap:10px;
+}
+
+.tabs button{
+  padding:6px 12px;
+  background:#020617;
+  border:1px solid #334155;
+  border-radius:6px;
+  color:#e2e8f0;
+  cursor:pointer;
+}
+
+.tabs button.active{
+  background:#1e293b;
+}
 
 .otp-panel {
     margin-top: 12px;
