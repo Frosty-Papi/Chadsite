@@ -10,7 +10,11 @@
     "better-sqlite3": "^12.9.0",
     "cookie-parser": "^1.4.7",
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     "cropperjs": "^1.6.2",
+=======
+    "cropperjs": "^2.1.1",
+>>>>>>> Stashed changes
 =======
     "cropperjs": "^2.1.1",
 >>>>>>> Stashed changes
