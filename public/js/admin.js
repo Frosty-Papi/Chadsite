@@ -204,3 +204,32 @@ document.addEventListener("DOMContentLoaded",()=>{
     }
 
 });
+
+document.addEventListener("click", (e) => {
+    if (!e.target.classList.contains("edit-service-btn")) return;
+
+    const btn = e.target;
+
+    const name = prompt("Service Name:", btn.dataset.name);
+    if (!name) return;
+
+    const path = prompt("Service Path/URL:", btn.dataset.path);
+    if (!path) return;
+
+    const min_role = prompt("Role (user/admin):", btn.dataset.role);
+    if (!min_role) return;
+
+    fetch("/admin/service/update", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "CSRF-Token": document.querySelector('input[name="_csrf"]').value
+        },
+        body: JSON.stringify({
+            serviceId: btn.dataset.id,
+            name,
+            path,
+            min_role
+        })
+    }).then(() => location.reload());
+});

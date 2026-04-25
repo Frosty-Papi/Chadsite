@@ -97,9 +97,32 @@
 
         <% services.forEach(s => { %>
           <div class="service-row">
-            <span><%= s.name %> (<%= s.min_role %>)</span>
-            <button type="button" class="secondary delete-service-btn" data-id="<%= s.id %>">Delete</button>
+          <div class="service-info">
+            <strong><%= s.name %></strong>
+
+            <div class="service-meta">
+              <span class="service-path"><%= s.path %></span>
+              <span class="service-role">(<%= s.min_role %>)</span>
+            </div>
           </div>
+
+          <div class="service-actions">
+            <button type="button"
+                    class="secondary edit-service-btn"
+                    data-id="<%= s.id %>"
+                    data-name="<%= s.name %>"
+                    data-path="<%= s.path %>"
+                    data-role="<%= s.min_role %>">
+              Edit
+            </button>
+
+            <button type="button"
+                    class="secondary delete-service-btn"
+                    data-id="<%= s.id %>">
+              Delete
+            </button>
+          </div>
+        </div>
         <% }) %>
       </div>
 

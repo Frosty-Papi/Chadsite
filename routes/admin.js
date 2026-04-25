@@ -240,11 +240,17 @@ router.post("/admin/service", requireSuperAdmin, (req, res) => {
 });
 
 router.post("/admin/service/update", requireSuperAdmin, (req, res) => {
-  const { id, name, path, icon, is_external, min_role } = req.body;
+  const { serviceId, name, path, min_role } = req.body;
+
+  if (!serviceId || !name || !path) {
+    return res.status(400).json({ error: "Missing fields" });
+  }
 
   db.prepare(`
-    UPDATE services SET name = ?, path = ?, icon = ?, is_external = ?, min_role = ? WHERE id = ?
-  `).run(name, path, icon || null, is_external ? 1 : 0, min_role || "user", id);
+  UPDATE services
+  SET name = ?, path = ?, min_role = ?
+  WHERE id = ?
+  `).run(name, path, min_role, serviceId);
 
   res.json({ success: true });
 });
