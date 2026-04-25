@@ -5,23 +5,23 @@
   <h2>Admin Dashboard</h2>
 
   <div class="profile-panel">
-    <div class="tabs">
-      <button type="button" data-tab="users" class="active">Users</button>
+    <div class="tabs" role="tablist" aria-label="Admin sections">
+      <button type="button" data-tab="users" class="active" role="tab" aria-controls="tab-users" aria-selected="true">Users</button>
       <% if (isSuperAdmin) { %>
-        <button type="button" data-tab="services">Services</button>
+        <button type="button" data-tab="services" role="tab" aria-controls="tab-services" aria-selected="false">Services</button>
       <% } %>
     </div>
   </div>
 
   <!-- USERS TAB -->
-  <div id="tab-users" class="tab">
+  <div id="tab-users" class="tab" role="tabpanel">
 
     <!-- Users List -->
     <div class="profile-panel">
       <h3>Users</h3>
 
       <div class="stack-form compact-form">
-        <input id="search" placeholder="Search users..." />
+        <input id="search" placeholder="Search users..." autocomplete="off" />
       </div>
 
       <div class="table-container">
@@ -36,7 +36,7 @@
           </thead>
           <tbody id="user-table">
             <% users.forEach(u => { %>
-              <tr data-name="<%= (u.username || '').toLowerCase() %>">
+              <tr data-id="<%= u.id %>" data-name="<%= (u.username || '').toLowerCase() %>">
                 <td><%= u.username %></td>
                 <td>
                   <% if (isSuperAdmin) { %>
@@ -48,7 +48,7 @@
                     <%= u.role %>
                   <% } %>
                 </td>
-                <td>
+                <td class="status-cell">
                   <% if (u.is_disabled) { %>
                     Disabled
                   <% } else if (u.must_reset_password) { %>
@@ -77,8 +77,8 @@
     <% if (isSuperAdmin) { %>
       <div class="profile-panel">
         <h3>Create User</h3>
-        <form id="create-user-form" class="stack-form">
-          <input name="username" placeholder="Username" required />
+        <form id="create-user-form" class="stack-form" autocomplete="off">
+          <input name="username" placeholder="Username" autocomplete="off" required />
           <button type="submit">Create User</button>
         </form>
       </div>
@@ -88,51 +88,53 @@
 
   <!-- SERVICES TAB -->
   <% if (isSuperAdmin) { %>
-    <div id="tab-services" class="tab hidden">
+    <div id="tab-services" class="tab hidden" role="tabpanel">
 
       <!-- Services List -->
       <div class="profile-panel">
         <h3>Services</h3>
 
-        <% services.forEach(s => { %>
-          <div class="service-row" data-id="<%= s.id %>">
+        <div id="service-list">
+          <% services.forEach(s => { %>
+            <div class="service-row" data-id="<%= s.id %>">
 
-          <div class="service-info view-mode">
-            <strong class="service-name"><%= s.name %></strong>
+              <div class="service-info view-mode">
+                <strong class="service-name"><%= s.name %></strong>
 
-            <div class="service-meta">
-              <span class="service-path"><%= s.path %></span>
-              <span class="service-role">(<%= s.min_role %>)</span>
+                <div class="service-meta">
+                  <span class="service-path"><%= s.path %></span>
+                  <span class="service-role">(<%= s.min_role %>)</span>
+                </div>
+              </div>
+
+              <!-- ✏️ EDIT MODE -->
+              <div class="service-edit hidden">
+                <div class="field">
+                  <input class="edit-name" value="<%= s.name %>" placeholder="Name" />
+                  <div class="error name-error"></div>
+                </div>
+
+                <div class="field">
+                  <input class="edit-path" value="<%= s.path %>" placeholder="Path or URL" />
+                  <div class="error path-error"></div>
+                </div>
+
+                <select class="edit-role">
+                  <option value="user" <%= s.min_role === "user" ? "selected" : "" %>>User</option>
+                  <option value="admin" <%= s.min_role === "admin" ? "selected" : "" %>>Admin</option>
+                </select>
+              </div>
+
+              <div class="service-actions">
+                <button type="button" class="secondary edit-service-btn">Edit</button>
+                <button type="button" class="secondary save-service-btn hidden">Save</button>
+                <button type="button" class="secondary cancel-service-btn hidden">Cancel</button>
+                <button type="button" class="secondary delete-service-btn" data-id="<%= s.id %>">Delete</button>
+              </div>
+
             </div>
-          </div>
-
-          <!-- ✏️ EDIT MODE -->
-          <div class="service-edit hidden">
-          <div class="field">
-            <input class="edit-name" value="<%= s.name %>" placeholder="Name" />
-            <div class="error name-error"></div>
-          </div>
-
-          <div class="field">
-            <input class="edit-path" value="<%= s.path %>" placeholder="Path or URL" />
-            <div class="error path-error"></div>
-          </div>
-
-          <select class="edit-role">
-            <option value="user" <%= s.min_role === "user" ? "selected" : "" %>>User</option>
-            <option value="admin" <%= s.min_role === "admin" ? "selected" : "" %>>Admin</option>
-          </select>
+          <% }) %>
         </div>
-
-          <div class="service-actions">
-            <button type="button" class="secondary edit-service-btn">Edit</button>
-            <button type="button" class="secondary save-service-btn hidden">Save</button>
-            <button type="button" class="secondary cancel-service-btn hidden">Cancel</button>
-            <button type="button" class="secondary delete-service-btn" data-id="<%= s.id %>">Delete</button>
-          </div>
-
-        </div>
-        <% }) %>
       </div>
 
       <!-- Create Service Section -->
@@ -140,7 +142,7 @@
         <h3>Create Service</h3>
         <form id="create-service-form" class="stack-form">
           <input name="name" placeholder="Name" required />
-          <input name="path" placeholder="Path" required />
+          <input name="path" placeholder="Path or https://url" required />
 
           <select name="min_role">
             <option value="user">User</option>
