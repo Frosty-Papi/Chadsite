@@ -30,6 +30,16 @@
 
     <aside class="play-panel">
       <h2>Lobby Details</h2>
+      <% if (session.host_user_id === currentUser.id) { %>
+        <div class="invite-box">
+          <h3>Invite Friend</h3>
+          <select id="inviteFriend">
+            <% members.forEach(m => {}); %>
+            <% /* you already pass friends on index, you may want to pass here too */ %>
+          </select>
+          <button id="inviteBtn">Invite</button>
+        </div>
+      <% } %>
       <dl class="lobby-details">
         <div>
           <dt>Host</dt>

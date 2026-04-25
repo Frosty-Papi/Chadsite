@@ -46,3 +46,21 @@ if (container) {
     location.href = data.redirectUrl || "/play";
   });
 }
+
+document.getElementById("inviteBtn")?.addEventListener("click", async () => {
+  const friendId = document.getElementById("inviteFriend").value;
+
+  await fetch("/api/play/invite", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "CSRF-Token": getCSRFToken()
+    },
+    body: JSON.stringify({
+      sessionId: document.querySelector(".lobby-actions").dataset.sessionId,
+                         friendId
+    })
+  });
+
+  alert("Invite sent");
+});

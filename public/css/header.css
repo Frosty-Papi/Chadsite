@@ -84,3 +84,24 @@ nav a {
 .dropdown-item.logout {
   color: #f87171;
 }
+
+.notif-bell {
+  cursor: pointer;
+  margin-left: 12px;
+}
+
+.notif-panel {
+  position: absolute;
+  right: 20px;
+  top: 60px;
+  width: 260px;
+  background: #020617;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 10px;
+  z-index: 999;
+}
+
+.notif-panel.hidden {
+  display: none;
+}
