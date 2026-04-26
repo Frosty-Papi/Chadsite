@@ -10,7 +10,8 @@
         reconnectTimer: null,
         activeTab: "users",
         editingServiceId: null,
-        search: ""
+        search: "",
+        serviceEdits: {} // ✅ ADD THIS
     };
 
     // =====================
@@ -119,7 +120,13 @@
     function applyState(data) {
         state.users = data.users || [];
         state.services = data.services || [];
-        render();
+
+        // ⚠️ Don't re-render services while editing
+        if (!state.editingServiceId) {
+            renderServices();
+        }
+
+        renderUsers();
     }
 
     function syncSoon() {
@@ -143,6 +150,8 @@
         state.users.forEach(user => {
             const tr = document.createElement("tr");
 
+            const isDisabled = !!user.is_disabled;
+
             tr.innerHTML = `
             <td>${escape(user.username)}</td>
             <td>
@@ -153,8 +162,8 @@
             </td>
             <td>${status(user)}</td>
             <td>
-            <button class="disable-btn" data-id="${user.id}">Disable</button>
-            <button class="enable-btn" data-id="${user.id}">Enable</button>
+            <button class="disable-btn" data-id="${user.id}" ${isDisabled ? "disabled" : ""}>Disable</button>
+            <button class="enable-btn" data-id="${user.id}" ${!isDisabled ? "disabled" : ""}>Enable</button>
             <button class="reset-btn" data-id="${user.id}">Reset</button>
             <button class="force-reset-btn" data-id="${user.id}">Force Reset</button>
             <button class="delete-btn" data-id="${user.id}">Delete</button>
@@ -172,18 +181,49 @@
         el.innerHTML = "";
 
         state.services.forEach(s => {
-            const div = document.createElement("div");
-            div.className = "service-row";
+            const isEditing = state.editingServiceId == s.id;
 
-            div.innerHTML = `
-            <span>${escape(s.name)}</span>
-            <span>${escape(s.path)}</span>
-            <span>(${s.min_role})</span>
-            <button class="edit-service-btn" data-id="${s.id}">Edit</button>
-            <button class="delete-service-btn" data-id="${s.id}">Delete</button>
-            `;
+            const row = document.createElement("div");
+            const edit = state.serviceEdits[s.id] || {};
 
-            el.appendChild(div);
+            const nameVal = edit.name ?? s.name;
+            const pathVal = edit.path ?? s.path;
+
+            row.className = "service-row";
+            row.dataset.id = s.id;
+
+            row.innerHTML = `
+            <div class="service-info ${isEditing ? "hidden" : ""}">
+            <span class="col name">${escape(s.name)}</span>
+            <span class="col path">${escape(s.path)}</span>
+            <span class="col role">${escape(s.min_role)}</span>
+            </div>
+
+            <div class="service-edit ${isEditing ? "" : "hidden"}">
+            <input class="edit-name" value="${escape(nameVal)}" placeholder="Name">
+            <input class="edit-path" value="${escape(pathVal)}" placeholder="/path or https://...">
+
+            <select class="edit-role">
+            <option value="user" ${s.min_role === "user" ? "selected" : ""}>User</option>
+            <option value="admin" ${s.min_role === "admin" ? "selected" : ""}>Admin</option>
+            </select>
+
+            <div class="validation name-error"></div>
+            <div class="validation path-error"></div>
+            </div>
+
+            <div class="service-actions">
+            ${isEditing ? `
+                <button class="save-service-btn" data-id="${s.id}">Save</button>
+                <button class="cancel-service-btn" data-id="${s.id}">Cancel</button>
+                ` : `
+                <button class="edit-service-btn" data-id="${s.id}">Edit</button>
+                <button class="delete-service-btn" data-id="${s.id}">Delete</button>
+                `}
+                </div>
+                `;
+
+                el.appendChild(row);
         });
     }
 
@@ -232,6 +272,12 @@
                     await api("/admin/user/force-reset", { userId: id });
                 }
 
+                if (btn.classList.contains("edit-service-btn")) {
+                    state.editingServiceId = id;
+                    renderServices();
+                    return;
+                }
+
                 if (btn.classList.contains("delete-btn")) {
                     if (confirm("Delete user?")) {
                         await api("/admin/user/delete", { userId: id });
@@ -242,6 +288,35 @@
                     if (confirm("Delete service?")) {
                         await api("/admin/service/delete", { serviceId: id });
                     }
+                }
+
+                if (btn.classList.contains("cancel-service-btn")) {
+                    delete state.serviceEdits[id];
+                    state.editingServiceId = null;
+                    renderServices();
+                    return;
+                }
+
+                if (btn.classList.contains("save-service-btn")) {
+                    const row = btn.closest(".service-row");
+
+                    if (!validateServiceRow(row)) return;
+
+                    const name = row.querySelector(".edit-name").value.trim();
+                    const path = row.querySelector(".edit-path").value.trim();
+                    const role = row.querySelector(".edit-role").value;
+
+                    await api("/admin/service/update", {
+                        serviceId: id,
+                        name,
+                        path,
+                        min_role: role
+                    });
+
+                    delete state.serviceEdits[id];
+                    state.editingServiceId = null;
+                    syncSoon();
+                    return;
                 }
 
                 syncSoon();
@@ -262,15 +337,114 @@
         });
     }
 
+    function setupTabs() {
+        document.querySelectorAll("[data-tab]").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const tab = btn.dataset.tab;
+
+                // hide all
+                document.querySelectorAll(".tab").forEach(t => t.classList.add("hidden"));
+
+                // deactivate all buttons
+                document.querySelectorAll("[data-tab]").forEach(b => b.classList.remove("active"));
+
+                // show selected
+                document.getElementById("tab-" + tab)?.classList.remove("hidden");
+
+                // activate button
+                btn.classList.add("active");
+            });
+        });
+    }
+
+    function bindServiceForm() {
+        const form = document.getElementById("create-service-form");
+        if (!form) return;
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const data = Object.fromEntries(new FormData(form));
+
+            await api("/admin/service", data);
+
+            form.reset();
+                              syncSoon();
+        });
+    }
+
+    function validateServiceRow(row) {
+        const nameInput = row.querySelector(".edit-name");
+        const pathInput = row.querySelector(".edit-path");
+
+        const nameError = row.querySelector(".name-error");
+        const pathError = row.querySelector(".path-error");
+
+        let valid = true;
+
+        // Name validation
+        if (!nameInput.value.trim()) {
+            nameError.textContent = "Name required";
+            nameInput.classList.add("invalid");
+            nameInput.classList.remove("valid");
+            valid = false;
+        } else {
+            nameError.textContent = "";
+            nameInput.classList.add("valid");
+            nameInput.classList.remove("invalid");
+        }
+
+        // Path validation
+        const path = pathInput.value.trim();
+
+        const internal = /^\/[a-z0-9/_-]*$/i.test(path);
+        let external = false;
+
+        try {
+            const url = new URL(path);
+            external = url.protocol === "http:" || url.protocol === "https:";
+        } catch {}
+
+        if (!internal && !external) {
+            pathError.textContent = "Invalid path or URL";
+            pathInput.classList.add("invalid");
+            pathInput.classList.remove("valid");
+            valid = false;
+        } else {
+            pathError.textContent = "";
+            pathInput.classList.add("valid");
+            pathInput.classList.remove("invalid");
+        }
+
+        return valid;
+    }
+
     // =====================
     // INIT
     // =====================
     document.addEventListener("DOMContentLoaded", async () => {
         bindEvents();
         connectWS();
+        setupTabs();
+        bindServiceForm();
 
         await loadState().catch(() => {});
         setInterval(loadState, 15000);
+    });
+
+    document.addEventListener("input", (e) => {
+        if (e.target.matches(".edit-name, .edit-path")) {
+            const row = e.target.closest(".service-row");
+            const id = row.dataset.id;
+            const edit = (state.serviceEdits && state.serviceEdits[s.id]) || {};
+
+            if (!state.serviceEdits[id]) {
+                state.serviceEdits[id] = {};
+            }
+
+            state.serviceEdits[id].name = row.querySelector(".edit-name").value;
+            state.serviceEdits[id].path = row.querySelector(".edit-path").value;
+        }
     });
 
 })();
