@@ -35,7 +35,7 @@ function removeEnhancement(card, side, i){
   saveState(); render();
 }
 
-// --- PATCH RENDER CARD ---
+// --- PATCH RENDER CARD (kept) ---
 const _oldRenderCard = renderCard;
 renderCard = function(card, zone){
   const base = _oldRenderCard(card, zone);
@@ -53,24 +53,41 @@ renderCard = function(card, zone){
   return base.replace('</article>', block + '</article>');
 }
 
-// --- PATCH EVENTS ---
+// --- FIX: event delegation + correct instance resolution ---
+function getCardInstance(name){
+  return (
+    state.cardsInHand.find(c=>c.name===name) ||
+    state.cardsDiscarded.find(c=>c.name===name) ||
+    state.cardsOnBoard.find(c=>c.name===name) ||
+    state.cardsDestroyed.find(c=>c.name===name) ||
+    state.abilitiesChosen.find(c=>c.name===name)
+  );
+}
+
+// remove per-element bindings by overriding bindEvents safely
 const _oldBind = bindEvents;
 bindEvents = function(){
   _oldBind();
 
-  document.querySelectorAll('[data-add]').forEach(el=>{
-    el.addEventListener('change',()=>{
-      const [name,side]=el.dataset.add.split('|');
-      const card = findCard(name);
-      addEnhancement(card, side, el.value);
-    });
-  });
-
-  document.querySelectorAll('[data-rem]').forEach(el=>{
-    el.addEventListener('click',()=>{
-      const [name,side,i]=el.dataset.rem.split('|');
-      const card = findCard(name);
-      removeEnhancement(card, side, Number(i));
-    });
-  });
+  // no-op: per-element listeners removed; use delegation below
 }
+
+// Delegated listeners (work across re-renders)
+document.addEventListener('change', (e)=>{
+  if(e.target.matches('[data-add]')){
+    const [name,side] = e.target.dataset.add.split('|');
+    const card = getCardInstance(name);
+    if(!card || !e.target.value) return;
+    addEnhancement(card, side, e.target.value);
+    e.target.value='';
+  }
+});
+
+document.addEventListener('click', (e)=>{
+  if(e.target.matches('[data-rem]')){
+    const [name,side,i] = e.target.dataset.rem.split('|');
+    const card = getCardInstance(name);
+    if(!card) return;
+    removeEnhancement(card, side, Number(i));
+  }
+});
