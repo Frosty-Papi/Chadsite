@@ -2,120 +2,174 @@ import { state } from './state.js';
 
 const ENHANCEMENTS = [
   { id: 'attack', label: '+1 Attack', cost: 75 },
-  { id: 'move', label: '+1 Move', cost: 50 },
-  { id: 'range', label: '+1 Range', cost: 30 },
-  { id: 'heal', label: '+1 Heal', cost: 50 },
-  { id: 'target', label: '+1 Target', cost: 75 }
+{ id: 'move', label: '+1 Move', cost: 50 },
+{ id: 'range', label: '+1 Range', cost: 30 }
 ];
 
-function ensureEnh(card){
-  if(!state.enhancements) state.enhancements={};
-  if(!state.enhancements[card.name]) state.enhancements[card.name]={top:[],bottom:[]};
+// ===== Enhancement Logic =====
+function ensureEnh(card) {
+  if (!state.enhancements[card.name]) {
+    state.enhancements[card.name] = { top: [], bottom: [] };
+  }
   return state.enhancements[card.name];
 }
 
-function addEnh(card,side,type){
-  const def=ENHANCEMENTS.find(e=>e.id===type);
-  if(!def)return;
-  ensureEnh(card)[side].push({label:def.label,cost:def.cost});
+function addEnh(card, side, type) {
+  const def = ENHANCEMENTS.find(e => e.id === type);
+  if (!def) return;
+
+  ensureEnh(card)[side].push(def);
   render();
 }
 
-function remEnh(card,side,i){
-  ensureEnh(card)[side].splice(i,1);
+function removeEnh(card, side, i) {
+  ensureEnh(card)[side].splice(i, 1);
   render();
 }
 
-function getCard(name){
-  return state.cardsInHand.find(c=>c.name===name)||
-         state.cardsDiscarded.find(c=>c.name===name)||
-         state.cardsOnBoard.find(c=>c.name===name)||
-         state.cardsDestroyed.find(c=>c.name===name);
+function getCard(name) {
+  return state.cardsInHand.find(c => c.name === name);
 }
 
-function renderCard(card,zone){
-  const enh=state.enhancements?.[card.name]||{top:[],bottom:[]};
+// ===== Build =====
+function renderBuild() {
+  const app = document.getElementById('app');
+  app.innerHTML = `<h2>Select Class</h2>`;
 
-  const el=document.createElement('div');
-  el.className='card';
+  (window.abilities || []).forEach(cls => {
+    const btn = document.createElement('button');
+    btn.textContent = cls.name;
+    btn.onclick = () => {
+      state.selectedClass = cls;
+      state.cardsInHand = [];
+      render();
+    };
+    app.appendChild(btn);
+  });
 
-  el.innerHTML=`
-    <div class="card-inner">
-      <img src="${card.image?'/deck-assets/data/'+card.image:''}" />
-      <div class="card-overlay">
-        <div class="card-title">${card.name}</div>
+  if (state.selectedClass) {
+    const grid = document.createElement('div');
 
-        <div class="enh">
-          <div>
-            <b>Top</b>
-            ${enh.top.map((e,i)=>`<span class="chip">${e.label}<button data-rem="${card.name}|top|${i}">×</button></span>`).join('')}
-            <select data-add="${card.name}|top"><option value="">+</option>${ENHANCEMENTS.map(e=>`<option value="${e.id}">${e.label}</option>`).join('')}</select>
-          </div>
+    state.selectedClass.cards.forEach(card => {
+      const el = document.createElement('div');
+      el.className = 'card-mini';
+      el.textContent = card.name;
 
-          <div>
-            <b>Bottom</b>
-            ${enh.bottom.map((e,i)=>`<span class="chip">${e.label}<button data-rem="${card.name}|bottom|${i}">×</button></span>`).join('')}
-            <select data-add="${card.name}|bottom"><option value="">+</option>${ENHANCEMENTS.map(e=>`<option value="${e.id}">${e.label}</option>`).join('')}</select>
-          </div>
-        </div>
+      el.onclick = () => {
+        state.cardsInHand.push({ ...card });
+        render();
+      };
 
-        <div class="actions">
-          ${zone==='hand'?'<button data-act="discard">Discard</button><button data-act="lose">Lose</button>':''}
-          ${zone==='discard'?'<button data-act="recover">Recover</button>':''}
-          ${zone==='active'?'<button data-act="discard">End</button>':''}
-        </div>
+      grid.appendChild(el);
+    });
+
+    app.appendChild(grid);
+  }
+
+  const playBtn = document.createElement('button');
+  playBtn.textContent = 'Go To Play';
+  playBtn.onclick = () => {
+    state.view = 'play';
+    render();
+  };
+
+  app.appendChild(playBtn);
+}
+
+// ===== Card UI =====
+function renderCard(card) {
+  const enh = state.enhancements[card.name] || { top: [], bottom: [] };
+
+  const el = document.createElement('div');
+  el.className = 'card';
+
+  el.innerHTML = `
+  <div class="card-title">${card.name}</div>
+
+  <div>
+  <strong>Top:</strong>
+  ${enh.top.map((e, i) => `
+    <span class="chip">
+    ${e.label}
+    <button data-rem="${card.name}|top|${i}">x</button>
+    </span>
+    `).join('')}
+
+    <select data-add="${card.name}|top">
+    <option value="">+</option>
+    ${ENHANCEMENTS.map(e => `
+      <option value="${e.id}">${e.label}</option>
+      `).join('')}
+      </select>
       </div>
-    </div>
-  `;
 
-  return el;
+      <div>
+      <strong>Bottom:</strong>
+      ${enh.bottom.map((e, i) => `
+        <span class="chip">
+        ${e.label}
+        <button data-rem="${card.name}|bottom|${i}">x</button>
+        </span>
+        `).join('')}
+
+        <select data-add="${card.name}|bottom">
+        <option value="">+</option>
+        ${ENHANCEMENTS.map(e => `
+          <option value="${e.id}">${e.label}</option>
+          `).join('')}
+          </select>
+          </div>
+          `;
+
+          return el;
 }
 
-function renderZone(title,cards,zone){
-  const sec=document.createElement('div');
-  sec.className='zone';
+// ===== Play =====
+function renderPlay() {
+  const app = document.getElementById('app');
+  app.innerHTML = `<h2>Hand</h2>`;
 
-  const h=document.createElement('h2');
-  h.textContent=`${title} (${cards.length})`;
+  state.cardsInHand.forEach(card => {
+    app.appendChild(renderCard(card));
+  });
 
-  const grid=document.createElement('div');
-  grid.className='grid';
+  const back = document.createElement('button');
+  back.textContent = 'Back to Build';
+  back.onclick = () => {
+    state.view = 'build';
+    render();
+  };
 
-  cards.forEach(c=>grid.appendChild(renderCard(c,zone)));
-
-  sec.appendChild(h);
-  sec.appendChild(grid);
-  return sec;
+  app.appendChild(back);
 }
 
-function render(){
-  const app=document.getElementById('app');
-  app.innerHTML='';
-
-  app.appendChild(renderZone('Hand',state.cardsInHand,'hand'));
-  app.appendChild(renderZone('Active',state.cardsOnBoard,'active'));
-  app.appendChild(renderZone('Discard',state.cardsDiscarded,'discard'));
-  app.appendChild(renderZone('Lost',state.cardsDestroyed,'lost'));
+// ===== Router =====
+function render() {
+  if (state.view === 'build') renderBuild();
+  else renderPlay();
 }
 
-// delegation
-document.addEventListener('change',e=>{
-  if(e.target.matches('[data-add]')){
-    const [n,s]=e.target.dataset.add.split('|');
-    const c=getCard(n);
-    if(!c||!e.target.value)return;
-    addEnh(c,s,e.target.value);
-    e.target.value='';
+// ===== Events (delegation) =====
+document.addEventListener('change', e => {
+  if (e.target.matches('[data-add]')) {
+    const [name, side] = e.target.dataset.add.split('|');
+    const card = getCard(name);
+    if (!card || !e.target.value) return;
+
+    addEnh(card, side, e.target.value);
+    e.target.value = '';
   }
 });
 
-document.addEventListener('click',e=>{
-  if(e.target.matches('[data-rem]')){
-    const [n,s,i]=e.target.dataset.rem.split('|');
-    const c=getCard(n);
-    if(!c)return;
-    remEnh(c,s,Number(i));
+document.addEventListener('click', e => {
+  if (e.target.matches('[data-rem]')) {
+    const [name, side, i] = e.target.dataset.rem.split('|');
+    const card = getCard(name);
+    if (!card) return;
+
+    removeEnh(card, side, Number(i));
   }
 });
 
+// ===== Init =====
 render();
