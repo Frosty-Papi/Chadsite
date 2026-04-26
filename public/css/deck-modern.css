@@ -485,3 +485,41 @@ p {
 .ability-pool .image-card .ability-image {
   width: 10em !important;
 }
+
+.card {
+  position: relative;
+  width: 180px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #111;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.card img {
+  width: 100%;
+  display: block;
+}
+
+.card-overlay {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  padding: 8px;
+  background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+}
+
+.enhancements {
+  font-size: 12px;
+}
+
+.enh-chip {
+  display: inline-block;
+  background: #222;
+  padding: 2px 6px;
+  margin: 2px;
+  border-radius: 6px;
+}
+
+.card-actions button {
+  margin: 2px;
+}

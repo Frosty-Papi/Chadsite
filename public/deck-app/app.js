@@ -1439,6 +1439,95 @@ function renderClassButtons() {
   `;
 }
 
+function renderCard(card, zone) {
+  const enh = state.enhancements?.[card.name] || { top: [], bottom: [] };
+
+  const container = document.createElement('div');
+  container.className = 'card';
+  container.dataset.name = card.name;
+
+  container.innerHTML = `
+  <div class="card-inner">
+  <img src="${card.image ? `/deck-assets/data/${card.image}` : ''}" />
+
+  <div class="card-overlay">
+  <div class="card-title">${card.name}</div>
+
+  <div class="enhancements">
+  <div class="enh-side">
+  <strong>Top</strong>
+  ${enh.top.map((e,i)=>`
+    <span class="enh-chip">
+    ${e.label} (${e.cost})
+    <button data-rem="${card.name}|top|${i}">×</button>
+    </span>
+    `).join('')}
+    <select data-add="${card.name}|top">
+    <option value="">+</option>
+    ${ENHANCEMENTS.map(e=>`<option value="${e.id}">${e.label}</option>`).join('')}
+    </select>
+    </div>
+
+    <div class="enh-side">
+    <strong>Bottom</strong>
+    ${enh.bottom.map((e,i)=>`
+      <span class="enh-chip">
+      ${e.label} (${e.cost})
+      <button data-rem="${card.name}|bottom|${i}">×</button>
+      </span>
+      `).join('')}
+      <select data-add="${card.name}|bottom">
+      <option value="">+</option>
+      ${ENHANCEMENTS.map(e=>`<option value="${e.id}">${e.label}</option>`).join('')}
+      </select>
+      </div>
+      </div>
+
+      <div class="card-actions">
+      ${zone === 'hand' ? `
+        <button data-action="select">Select</button>
+        <button data-action="discard">Discard</button>
+        <button data-action="lose">Lose</button>
+        ` : ''}
+
+        ${zone === 'discard' ? `
+          <button data-action="recover">Recover</button>
+          <button data-action="active1">1 Turn</button>
+          <button data-action="activePersist">∞</button>
+          ` : ''}
+
+          ${zone === 'active' ? `
+            <button data-action="use">Use</button>
+            <button data-action="discard">End</button>
+            ` : ''}
+            </div>
+            </div>
+            </div>
+            `;
+
+            return container;
+}
+
+function renderZone(title, cards, zone) {
+  const section = document.createElement('section');
+  section.className = 'zone';
+
+  const header = document.createElement('h2');
+  header.textContent = `${title} (${cards.length})`;
+
+  const grid = document.createElement('div');
+  grid.className = 'card-grid';
+
+  cards.forEach(card => {
+    grid.appendChild(renderCard(card, zone));
+  });
+
+  section.appendChild(header);
+  section.appendChild(grid);
+
+  return section;
+}
+
 function renderAbilityPool() {
   if (!state.abilityCategory) return '<p class="muted">Choose a class to build a deck.</p>';
 
@@ -1508,6 +1597,16 @@ function renderPlayZoneCards(title, cards, pickType = '') {
         </div>
         `;
   }).join('');
+}
+
+function renderPlayView() {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+
+  app.appendChild(renderZone('Hand', state.cardsInHand, 'hand'));
+  app.appendChild(renderZone('Active', state.cardsOnBoard, 'active'));
+  app.appendChild(renderZone('Discard', state.cardsDiscarded, 'discard'));
+  app.appendChild(renderZone('Lost', state.cardsDestroyed, 'lost'));
 }
 
 function renderModifiersPanel() {
