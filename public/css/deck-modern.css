@@ -72,3 +72,19 @@ body {
 .enh-block {
   font-size: 12px;
 }
+
+.zones {
+  display: grid;
+  gap: 20px;
+}
+
+.zone {
+  border: 1px solid #333;
+  padding: 10px;
+  border-radius: 8px;
+  background: #181818;
+}
+
+.actions button {
+  margin: 4px;
+}

@@ -6,7 +6,7 @@ const ENHANCEMENTS = [
 { id: 'range', label: '+1 Range' }
 ];
 
-// ===== Enhancements =====
+// ===== ENHANCEMENTS =====
 function ensureEnh(card) {
   if (!state.enhancements[card.name]) {
     state.enhancements[card.name] = { top: [], bottom: [] };
@@ -17,7 +17,6 @@ function ensureEnh(card) {
 function addEnh(card, side, type) {
   const def = ENHANCEMENTS.find(e => e.id === type);
   if (!def) return;
-
   ensureEnh(card)[side].push(def);
   render();
 }
@@ -27,8 +26,21 @@ function removeEnh(card, side, i) {
   render();
 }
 
-function getCard(name) {
-  return state.cardsInHand.find(c => c.name === name);
+// ===== CARD LOOKUP =====
+function findCardInZones(name) {
+  return (
+    state.cardsInHand.find(c => c.name === name) ||
+    state.cardsDiscarded.find(c => c.name === name) ||
+    state.cardsOnBoard.find(c => c.name === name) ||
+    state.cardsDestroyed.find(c => c.name === name)
+  );
+}
+
+// ===== ACTIONS =====
+function moveCard(card, from, to) {
+  state[from] = state[from].filter(c => c !== card);
+  state[to].push(card);
+  render();
 }
 
 // ===== BUILD =====
@@ -83,18 +95,41 @@ function renderBuild() {
 }
 
 // ===== CARD UI =====
-function renderCard(card) {
+function renderCard(card, zone) {
   const enh = state.enhancements[card.name] || { top: [], bottom: [] };
 
   const el = document.createElement('div');
   el.className = 'card';
+
+  let actions = '';
+
+  if (zone === 'hand') {
+    actions = `
+    <button data-act="discard">Discard</button>
+    <button data-act="lose">Lose</button>
+    <button data-act="activate">Activate</button>
+    `;
+  }
+
+  if (zone === 'discard') {
+    actions = `
+    <button data-act="recover">Recover</button>
+    <button data-act="activate">Activate</button>
+    `;
+  }
+
+  if (zone === 'active') {
+    actions = `
+    <button data-act="end">End</button>
+    `;
+  }
 
   el.innerHTML = `
   <div class="card-header">${card.name}</div>
 
   <div class="enh-block">
   <div>
-  <span>Top:</span>
+  Top:
   ${enh.top.map((e, i) => `
     <span class="chip">
     ${e.label}
@@ -106,24 +141,33 @@ function renderCard(card) {
     ${ENHANCEMENTS.map(e => `<option value="${e.id}">${e.label}</option>`).join('')}
     </select>
     </div>
+    </div>
 
-    <div>
-    <span>Bottom:</span>
-    ${enh.bottom.map((e, i) => `
-      <span class="chip">
-      ${e.label}
-      <button data-rem="${card.name}|bottom|${i}">×</button>
-      </span>
-      `).join('')}
-      <select data-add="${card.name}|bottom">
-      <option value="">+</option>
-      ${ENHANCEMENTS.map(e => `<option value="${e.id}">${e.label}</option>`).join('')}
-      </select>
-      </div>
-      </div>
-      `;
+    <div class="actions">${actions}</div>
+    `;
 
-      return el;
+    el.dataset.name = card.name;
+    el.dataset.zone = zone;
+
+    return el;
+}
+
+// ===== ZONES =====
+function renderZone(title, cards, zone) {
+  const sec = document.createElement('div');
+  sec.className = 'zone';
+
+  sec.innerHTML = `<h2>${title} (${cards.length})</h2>`;
+
+  const grid = document.createElement('div');
+  grid.className = 'card-grid';
+
+  cards.forEach(card => {
+    grid.appendChild(renderCard(card, zone));
+  });
+
+  sec.appendChild(grid);
+  return sec;
 }
 
 // ===== PLAY =====
@@ -134,19 +178,21 @@ function renderPlay() {
   <div class="page">
   <div class="topbar">
   <button id="toBuild">Back</button>
-  <h1>Hand</h1>
+  <h1>Play</h1>
   </div>
-  <div class="card-grid" id="hand"></div>
+
+  <div class="zones"></div>
   </div>
   `;
 
-  const hand = app.querySelector('#hand');
+  const zones = app.querySelector('.zones');
 
-  state.cardsInHand.forEach(card => {
-    hand.appendChild(renderCard(card));
-  });
+  zones.appendChild(renderZone('Hand', state.cardsInHand, 'hand'));
+  zones.appendChild(renderZone('Active', state.cardsOnBoard, 'active'));
+  zones.appendChild(renderZone('Discard', state.cardsDiscarded, 'discard'));
+  zones.appendChild(renderZone('Lost', state.cardsDestroyed, 'lost'));
 
-  app.querySelector('#toBuild').onclick = () => {
+  document.getElementById('toBuild').onclick = () => {
     state.view = 'build';
     render();
   };
@@ -159,24 +205,51 @@ function render() {
 }
 
 // ===== EVENTS =====
+document.addEventListener('click', e => {
+  const cardEl = e.target.closest('.card');
+  if (!cardEl) return;
+
+  const name = cardEl.dataset.name;
+  const zone = cardEl.dataset.zone;
+  const card = findCardInZones(name);
+
+  if (!card) return;
+
+  if (e.target.dataset.act === 'discard') {
+    moveCard(card, 'cardsInHand', 'cardsDiscarded');
+  }
+
+  if (e.target.dataset.act === 'lose') {
+    moveCard(card, 'cardsInHand', 'cardsDestroyed');
+  }
+
+  if (e.target.dataset.act === 'activate') {
+    moveCard(card, zone === 'hand' ? 'cardsInHand' : 'cardsDiscarded', 'cardsOnBoard');
+  }
+
+  if (e.target.dataset.act === 'recover') {
+    moveCard(card, 'cardsDiscarded', 'cardsInHand');
+  }
+
+  if (e.target.dataset.act === 'end') {
+    moveCard(card, 'cardsOnBoard', 'cardsDiscarded');
+  }
+
+  if (e.target.matches('[data-rem]')) {
+    const [n, side, i] = e.target.dataset.rem.split('|');
+    removeEnh(card, side, Number(i));
+  }
+});
+
 document.addEventListener('change', e => {
   if (e.target.matches('[data-add]')) {
     const [name, side] = e.target.dataset.add.split('|');
-    const card = getCard(name);
+    const card = findCardInZones(name);
+
     if (!card || !e.target.value) return;
 
     addEnh(card, side, e.target.value);
     e.target.value = '';
-  }
-});
-
-document.addEventListener('click', e => {
-  if (e.target.matches('[data-rem]')) {
-    const [name, side, i] = e.target.dataset.rem.split('|');
-    const card = getCard(name);
-    if (!card) return;
-
-    removeEnh(card, side, Number(i));
   }
 });
 
