@@ -14,6 +14,15 @@ let autosaveTimer = null;
 /* -------------------------
  A SSET HELPERS                                    *
  -------------------------- */
+function getCardInstance(name) {
+  return (
+    state.cardsInHand.find(c => c.name === name) ||
+    state.cardsDiscarded.find(c => c.name === name) ||
+    state.cardsOnBoard.find(c => c.name === name) ||
+    state.cardsDestroyed.find(c => c.name === name) ||
+    state.abilitiesChosen.find(c => c.name === name)
+  );
+}
 
 function deckAsset(path) {
   return `/deck-assets/${path}`;
@@ -2056,16 +2065,30 @@ function bindEvents() {
   })
   );
 
-  document.querySelectorAll('[data-edit-enhancement]').forEach(btn =>
-  btn.addEventListener('click', () => {
-    const card = findAbilityByName(btn.dataset.editEnhancement);
-    if (card) {
-      state.cardToEnhance = card;
-      state.enhancementEditingCard = card;
-      render();
+  document.addEventListener('change', (e) => {
+    if (e.target.matches('[data-add]')) {
+      const [name, side] = e.target.dataset.add.split('|');
+      const card = getCardInstance(name);
+
+      if (!card || !e.target.value) return;
+
+      addEnhancement(card, side, e.target.value);
+
+      // reset dropdown so user can re-add
+      e.target.value = '';
     }
-  })
-  );
+  });
+
+  document.addEventListener('click', (e) => {
+    if (e.target.matches('[data-rem]')) {
+      const [name, side, i] = e.target.dataset.rem.split('|');
+      const card = getCardInstance(name);
+
+      if (!card) return;
+
+      removeEnhancement(card, side, Number(i));
+    }
+  });
 
   document.getElementById('openCardExchange')?.addEventListener('click', initCardExchange);
   document.getElementById('openModifierSort')?.addEventListener('click', () => openModal('modifierSort'));
