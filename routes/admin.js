@@ -7,6 +7,14 @@ const { deleteAvatarFile } = require("../lib/files");
 
 const router = express.Router();
 
+
+function pushAdminState(req) {
+  req.app.get("realtime").broadcastAdminState({
+    users: listUsers(),
+                                              services: listServices()
+  });
+}
+
 function safeRoute(handler) {
   return (req, res) => {
     try {
