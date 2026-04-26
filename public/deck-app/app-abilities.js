@@ -1,93 +1,121 @@
-// --- ENHANCEMENT SYSTEM ---
+import { state } from './state.js';
+
 const ENHANCEMENTS = [
   { id: 'attack', label: '+1 Attack', cost: 75 },
   { id: 'move', label: '+1 Move', cost: 50 },
   { id: 'range', label: '+1 Range', cost: 30 },
   { id: 'heal', label: '+1 Heal', cost: 50 },
-  { id: 'target', label: '+1 Target', cost: 75 },
-  { id: 'stun', label: 'Stun', cost: 150 },
-  { id: 'poison', label: 'Poison', cost: 75 }
+  { id: 'target', label: '+1 Target', cost: 75 }
 ];
 
-function getSlots(){ return 3; }
-function calcCost(base, count){ return base + (count*25); }
-
 function ensureEnh(card){
-  if(!state.enhancements) state.enhancements = {};
-  if(!state.enhancements[card.name]){
-    state.enhancements[card.name] = {top:[], bottom:[]};
-  }
+  if(!state.enhancements) state.enhancements={};
+  if(!state.enhancements[card.name]) state.enhancements[card.name]={top:[],bottom:[]};
   return state.enhancements[card.name];
 }
 
-function addEnhancement(card, side, type){
-  const def = ENHANCEMENTS.find(e=>e.id===type);
-  if(!def) return;
-  const slot = ensureEnh(card)[side];
-  if(slot.length >= getSlots()) return alert('No slots available');
-  const cost = calcCost(def.cost, slot.length);
-  slot.push({type:def.id,label:def.label,cost});
-  saveState(); render();
+function addEnh(card,side,type){
+  const def=ENHANCEMENTS.find(e=>e.id===type);
+  if(!def)return;
+  ensureEnh(card)[side].push({label:def.label,cost:def.cost});
+  render();
 }
 
-function removeEnhancement(card, side, i){
+function remEnh(card,side,i){
   ensureEnh(card)[side].splice(i,1);
-  saveState(); render();
+  render();
 }
 
-// --- PATCH RENDER CARD (kept) ---
-const _oldRenderCard = renderCard;
-renderCard = function(card, zone){
-  const base = _oldRenderCard(card, zone);
-  const enh = state.enhancements?.[card.name] || {top:[],bottom:[]};
+function getCard(name){
+  return state.cardsInHand.find(c=>c.name===name)||
+         state.cardsDiscarded.find(c=>c.name===name)||
+         state.cardsOnBoard.find(c=>c.name===name)||
+         state.cardsDestroyed.find(c=>c.name===name);
+}
 
-  const block = `
-    <div class="enh-block">
-      <div>Top: ${enh.top.map((e,i)=>`${e.label} (${e.cost}) <button data-rem="${card.name}|top|${i}">x</button>`).join('<br>')}</div>
-      <div>Bottom: ${enh.bottom.map((e,i)=>`${e.label} (${e.cost}) <button data-rem="${card.name}|bottom|${i}">x</button>`).join('<br>')}</div>
-      <select data-add="${card.name}|top"><option value="">Add Top</option>${ENHANCEMENTS.map(e=>`<option value="${e.id}">${e.label}</option>`).join('')}</select>
-      <select data-add="${card.name}|bottom"><option value="">Add Bottom</option>${ENHANCEMENTS.map(e=>`<option value="${e.id}">${e.label}</option>`).join('')}</select>
+function renderCard(card,zone){
+  const enh=state.enhancements?.[card.name]||{top:[],bottom:[]};
+
+  const el=document.createElement('div');
+  el.className='card';
+
+  el.innerHTML=`
+    <div class="card-inner">
+      <img src="${card.image?'/deck-assets/data/'+card.image:''}" />
+      <div class="card-overlay">
+        <div class="card-title">${card.name}</div>
+
+        <div class="enh">
+          <div>
+            <b>Top</b>
+            ${enh.top.map((e,i)=>`<span class="chip">${e.label}<button data-rem="${card.name}|top|${i}">×</button></span>`).join('')}
+            <select data-add="${card.name}|top"><option value="">+</option>${ENHANCEMENTS.map(e=>`<option value="${e.id}">${e.label}</option>`).join('')}</select>
+          </div>
+
+          <div>
+            <b>Bottom</b>
+            ${enh.bottom.map((e,i)=>`<span class="chip">${e.label}<button data-rem="${card.name}|bottom|${i}">×</button></span>`).join('')}
+            <select data-add="${card.name}|bottom"><option value="">+</option>${ENHANCEMENTS.map(e=>`<option value="${e.id}">${e.label}</option>`).join('')}</select>
+          </div>
+        </div>
+
+        <div class="actions">
+          ${zone==='hand'?'<button data-act="discard">Discard</button><button data-act="lose">Lose</button>':''}
+          ${zone==='discard'?'<button data-act="recover">Recover</button>':''}
+          ${zone==='active'?'<button data-act="discard">End</button>':''}
+        </div>
+      </div>
     </div>
   `;
 
-  return base.replace('</article>', block + '</article>');
+  return el;
 }
 
-// --- FIX: event delegation + correct instance resolution ---
-function getCardInstance(name){
-  return (
-    state.cardsInHand.find(c=>c.name===name) ||
-    state.cardsDiscarded.find(c=>c.name===name) ||
-    state.cardsOnBoard.find(c=>c.name===name) ||
-    state.cardsDestroyed.find(c=>c.name===name) ||
-    state.abilitiesChosen.find(c=>c.name===name)
-  );
+function renderZone(title,cards,zone){
+  const sec=document.createElement('div');
+  sec.className='zone';
+
+  const h=document.createElement('h2');
+  h.textContent=`${title} (${cards.length})`;
+
+  const grid=document.createElement('div');
+  grid.className='grid';
+
+  cards.forEach(c=>grid.appendChild(renderCard(c,zone)));
+
+  sec.appendChild(h);
+  sec.appendChild(grid);
+  return sec;
 }
 
-// remove per-element bindings by overriding bindEvents safely
-const _oldBind = bindEvents;
-bindEvents = function(){
-  _oldBind();
+function render(){
+  const app=document.getElementById('app');
+  app.innerHTML='';
 
-  // no-op: per-element listeners removed; use delegation below
+  app.appendChild(renderZone('Hand',state.cardsInHand,'hand'));
+  app.appendChild(renderZone('Active',state.cardsOnBoard,'active'));
+  app.appendChild(renderZone('Discard',state.cardsDiscarded,'discard'));
+  app.appendChild(renderZone('Lost',state.cardsDestroyed,'lost'));
 }
 
-// Delegated listeners (work across re-renders)
-document.addEventListener('change', (e)=>{
+// delegation
+document.addEventListener('change',e=>{
   if(e.target.matches('[data-add]')){
-    const [name,side] = e.target.dataset.add.split('|');
-    const card = getCardInstance(name);
-    if(!card || !e.target.value) return;
-    addEnhancement(card, side, e.target.value);
+    const [n,s]=e.target.dataset.add.split('|');
+    const c=getCard(n);
+    if(!c||!e.target.value)return;
+    addEnh(c,s,e.target.value);
     e.target.value='';
   }
 });
 
-document.addEventListener('click', (e)=>{
+document.addEventListener('click',e=>{
   if(e.target.matches('[data-rem]')){
-    const [name,side,i] = e.target.dataset.rem.split('|');
-    const card = getCardInstance(name);
-    if(!card) return;
-    removeEnhancement(card, side, Number(i));
+    const [n,s,i]=e.target.dataset.rem.split('|');
+    const c=getCard(n);
+    if(!c)return;
+    remEnh(c,s,Number(i));
   }
 });
+
+render();
