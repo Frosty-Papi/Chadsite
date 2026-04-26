@@ -6,6 +6,33 @@ const ENHANCEMENTS = [
 { id: 'range', label: '+1 Range' }
 ];
 
+function toggleSelect(card) {
+  const exists = state.selectedCards.includes(card);
+
+  if (exists) {
+    state.selectedCards = state.selectedCards.filter(c => c !== card);
+  } else {
+    if (state.selectedCards.length >= 2) return;
+    state.selectedCards.push(card);
+  }
+
+  render();
+}
+
+function playTurn() {
+  if (state.selectedCards.length !== 2) return;
+
+  state.selectedCards.forEach(card => {
+    state.cardsInHand = state.cardsInHand.filter(c => c !== card);
+    state.cardsDiscarded.push(card);
+  });
+
+  state.selectedCards = [];
+  state.turn++;
+
+  render();
+}
+
 // ===== ENHANCEMENTS =====
 function ensureEnh(card) {
   if (!state.enhancements[card.name]) {
@@ -99,12 +126,16 @@ function renderCard(card, zone) {
   const enh = state.enhancements[card.name] || { top: [], bottom: [] };
 
   const el = document.createElement('div');
+  const isSelected = state.selectedCards.includes(card);
+
+  el.classList.toggle('selected', isSelected);
   el.className = 'card';
 
   let actions = '';
 
   if (zone === 'hand') {
     actions = `
+    <button data-act="select">Select</button>
     <button data-act="discard">Discard</button>
     <button data-act="lose">Lose</button>
     <button data-act="activate">Activate</button>
@@ -178,7 +209,8 @@ function renderPlay() {
   <div class="page">
   <div class="topbar">
   <button id="toBuild">Back</button>
-  <h1>Play</h1>
+  <h1>Turn ${state.turn}</h1>
+  <button id="playTurn">Play Turn</button>
   </div>
 
   <div class="zones"></div>
@@ -196,6 +228,7 @@ function renderPlay() {
     state.view = 'build';
     render();
   };
+  document.getElementById('playTurn').onclick = playTurn;
 }
 
 // ===== ROUTER =====
@@ -233,6 +266,10 @@ document.addEventListener('click', e => {
 
   if (e.target.dataset.act === 'end') {
     moveCard(card, 'cardsOnBoard', 'cardsDiscarded');
+  }
+
+  if (e.target.dataset.act === 'select') {
+    toggleSelect(card);
   }
 
   if (e.target.matches('[data-rem]')) {

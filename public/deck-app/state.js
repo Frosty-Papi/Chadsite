@@ -8,5 +8,7 @@ export const state = {
   cardsDestroyed: [],
   cardsOnBoard: [],
 
-  enhancements: {}
+  enhancements: {},
+  selectedCards: [],
+  turn: 1
 };
