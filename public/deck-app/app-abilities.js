@@ -1,12 +1,12 @@
 import { state } from './state.js';
 
 const ENHANCEMENTS = [
-  { id: 'attack', label: '+1 Attack', cost: 75 },
-{ id: 'move', label: '+1 Move', cost: 50 },
-{ id: 'range', label: '+1 Range', cost: 30 }
+  { id: 'attack', label: '+1 Attack' },
+{ id: 'move', label: '+1 Move' },
+{ id: 'range', label: '+1 Range' }
 ];
 
-// ===== Enhancement Logic =====
+// ===== Enhancements =====
 function ensureEnh(card) {
   if (!state.enhancements[card.name]) {
     state.enhancements[card.name] = { top: [], bottom: [] };
@@ -31,28 +31,40 @@ function getCard(name) {
   return state.cardsInHand.find(c => c.name === name);
 }
 
-// ===== Build =====
+// ===== BUILD =====
 function renderBuild() {
   const app = document.getElementById('app');
-  app.innerHTML = `<h2>Select Class</h2>`;
+
+  app.innerHTML = `
+  <div class="page">
+  <h1>Select Class</h1>
+  <div class="class-grid"></div>
+  <div class="card-grid"></div>
+  <button id="toPlay" class="primary">Play</button>
+  </div>
+  `;
+
+  const classGrid = app.querySelector('.class-grid');
+  const cardGrid = app.querySelector('.card-grid');
 
   (window.abilities || []).forEach(cls => {
     const btn = document.createElement('button');
+    btn.className = 'class-btn';
     btn.textContent = cls.name;
+
     btn.onclick = () => {
       state.selectedClass = cls;
       state.cardsInHand = [];
       render();
     };
-    app.appendChild(btn);
+
+    classGrid.appendChild(btn);
   });
 
   if (state.selectedClass) {
-    const grid = document.createElement('div');
-
     state.selectedClass.cards.forEach(card => {
       const el = document.createElement('div');
-      el.className = 'card-mini';
+      el.className = 'card-select';
       el.textContent = card.name;
 
       el.onclick = () => {
@@ -60,23 +72,17 @@ function renderBuild() {
         render();
       };
 
-      grid.appendChild(el);
+      cardGrid.appendChild(el);
     });
-
-    app.appendChild(grid);
   }
 
-  const playBtn = document.createElement('button');
-  playBtn.textContent = 'Go To Play';
-  playBtn.onclick = () => {
+  app.querySelector('#toPlay').onclick = () => {
     state.view = 'play';
     render();
   };
-
-  app.appendChild(playBtn);
 }
 
-// ===== Card UI =====
+// ===== CARD UI =====
 function renderCard(card) {
   const enh = state.enhancements[card.name] || { top: [], bottom: [] };
 
@@ -84,72 +90,75 @@ function renderCard(card) {
   el.className = 'card';
 
   el.innerHTML = `
-  <div class="card-title">${card.name}</div>
+  <div class="card-header">${card.name}</div>
 
+  <div class="enh-block">
   <div>
-  <strong>Top:</strong>
+  <span>Top:</span>
   ${enh.top.map((e, i) => `
     <span class="chip">
     ${e.label}
-    <button data-rem="${card.name}|top|${i}">x</button>
+    <button data-rem="${card.name}|top|${i}">×</button>
     </span>
     `).join('')}
-
     <select data-add="${card.name}|top">
     <option value="">+</option>
-    ${ENHANCEMENTS.map(e => `
-      <option value="${e.id}">${e.label}</option>
+    ${ENHANCEMENTS.map(e => `<option value="${e.id}">${e.label}</option>`).join('')}
+    </select>
+    </div>
+
+    <div>
+    <span>Bottom:</span>
+    ${enh.bottom.map((e, i) => `
+      <span class="chip">
+      ${e.label}
+      <button data-rem="${card.name}|bottom|${i}">×</button>
+      </span>
       `).join('')}
+      <select data-add="${card.name}|bottom">
+      <option value="">+</option>
+      ${ENHANCEMENTS.map(e => `<option value="${e.id}">${e.label}</option>`).join('')}
       </select>
       </div>
+      </div>
+      `;
 
-      <div>
-      <strong>Bottom:</strong>
-      ${enh.bottom.map((e, i) => `
-        <span class="chip">
-        ${e.label}
-        <button data-rem="${card.name}|bottom|${i}">x</button>
-        </span>
-        `).join('')}
-
-        <select data-add="${card.name}|bottom">
-        <option value="">+</option>
-        ${ENHANCEMENTS.map(e => `
-          <option value="${e.id}">${e.label}</option>
-          `).join('')}
-          </select>
-          </div>
-          `;
-
-          return el;
+      return el;
 }
 
-// ===== Play =====
+// ===== PLAY =====
 function renderPlay() {
   const app = document.getElementById('app');
-  app.innerHTML = `<h2>Hand</h2>`;
+
+  app.innerHTML = `
+  <div class="page">
+  <div class="topbar">
+  <button id="toBuild">Back</button>
+  <h1>Hand</h1>
+  </div>
+  <div class="card-grid" id="hand"></div>
+  </div>
+  `;
+
+  const hand = app.querySelector('#hand');
 
   state.cardsInHand.forEach(card => {
-    app.appendChild(renderCard(card));
+    hand.appendChild(renderCard(card));
   });
 
-  const back = document.createElement('button');
-  back.textContent = 'Back to Build';
-  back.onclick = () => {
+  app.querySelector('#toBuild').onclick = () => {
     state.view = 'build';
     render();
   };
-
-  app.appendChild(back);
 }
 
-// ===== Router =====
+// ===== ROUTER =====
 function render() {
   if (state.view === 'build') renderBuild();
   else renderPlay();
 }
 
-// ===== Events (delegation) =====
+// ===== EVENTS =====
 document.addEventListener('change', e => {
   if (e.target.matches('[data-add]')) {
     const [name, side] = e.target.dataset.add.split('|');
@@ -171,5 +180,4 @@ document.addEventListener('click', e => {
   }
 });
 
-// ===== Init =====
 render();

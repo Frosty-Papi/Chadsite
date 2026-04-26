@@ -1,19 +1,64 @@
 body {
-  font-family: Arial, sans-serif;
-  background: #111;
+  background: #0f0f0f;
   color: #fff;
+  font-family: system-ui;
+  margin: 0;
+}
+
+.page {
+  padding: 20px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.primary {
+  padding: 10px 16px;
+  background: #3a7cff;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.class-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.class-btn {
+  padding: 8px 12px;
+  background: #222;
+  border: 1px solid #444;
+  cursor: pointer;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
 }
 
 .card {
-  background: #222;
+  background: #1c1c1c;
   padding: 10px;
-  margin: 10px;
   border-radius: 8px;
 }
 
-.card-title {
+.card-header {
   font-weight: bold;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
+}
+
+.card-select {
+  background: #2a2a2a;
+  padding: 6px;
+  cursor: pointer;
 }
 
 .chip {
@@ -24,10 +69,6 @@ body {
   border-radius: 4px;
 }
 
-.card-mini {
-  background: #333;
-  padding: 6px;
-  margin: 4px;
-  display: inline-block;
-  cursor: pointer;
+.enh-block {
+  font-size: 12px;
 }
