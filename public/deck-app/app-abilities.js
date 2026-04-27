@@ -6,6 +6,11 @@ const ENHANCEMENTS = [
 { id: 'range', label: '+1 Range' }
 ];
 
+function getInitiative(card) {
+  // fallback if no initiative data exists
+  return card.initiative || Math.floor(Math.random() * 90) + 10;
+}
+
 function toggleSelect(card) {
   const exists = state.selectedCards.includes(card);
 
@@ -16,19 +21,28 @@ function toggleSelect(card) {
     state.selectedCards.push(card);
   }
 
+  if (state.selectedCards.length === 2) {
+    state.turnPhase = 'order';
+  } else {
+    state.turnPhase = 'select';
+  }
+
   render();
 }
 
 function playTurn() {
-  if (state.selectedCards.length !== 2) return;
+  if (state.turnPhase !== 'resolve') return;
 
-  state.selectedCards.forEach(card => {
+  state.orderedCards.forEach(card => {
     state.cardsInHand = state.cardsInHand.filter(c => c !== card);
     state.cardsDiscarded.push(card);
   });
 
   state.selectedCards = [];
+  state.orderedCards = [];
+  state.turnPhase = 'select';
   state.turn++;
+  state.initiative = null;
 
   render();
 }
@@ -204,17 +218,38 @@ function renderZone(title, cards, zone) {
 // ===== PLAY =====
 function renderPlay() {
   const app = document.getElementById('app');
+  let orderUI = '';
+
+  if (state.turnPhase === 'order') {
+    const [a, b] = state.selectedCards;
+
+      orderUI = `
+      <div class="order-panel">
+      <h3>Choose Card Order</h3>
+
+      <button data-order="ab">
+      ${a.name} (Top) → ${b.name} (Bottom)
+      </button>
+
+      <button data-order="ba">
+      ${b.name} (Top) → ${a.name} (Bottom)
+      </button>
+      </div>
+      `;
+    }
 
   app.innerHTML = `
   <div class="page">
   <div class="topbar">
   <button id="toBuild">Back</button>
   <h1>Turn ${state.turn}</h1>
+  <div>Initiative: ${state.initiative ?? '-'}</div>
   <button id="playTurn">Play Turn</button>
   </div>
 
   <div class="zones"></div>
   </div>
+  ${orderUI}
   `;
 
   const zones = app.querySelector('.zones');
@@ -229,6 +264,8 @@ function renderPlay() {
     render();
   };
   document.getElementById('playTurn').onclick = playTurn;
+
+
 }
 
 // ===== ROUTER =====
@@ -270,6 +307,23 @@ document.addEventListener('click', e => {
 
   if (e.target.dataset.act === 'select') {
     toggleSelect(card);
+  }
+
+  if (e.target.dataset.order) {
+    const [a, b] = state.selectedCards;
+
+    if (e.target.dataset.order === 'ab') {
+      state.orderedCards = [a, b];
+    } else {
+      state.orderedCards = [b, a];
+    }
+
+    // initiative = top card
+    state.initiative = getInitiative(state.orderedCards[0]);
+
+    state.turnPhase = 'resolve';
+
+    render();
   }
 
   if (e.target.matches('[data-rem]')) {

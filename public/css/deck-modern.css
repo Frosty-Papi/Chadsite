@@ -92,3 +92,16 @@ body {
 .selected {
   outline: 2px solid #3a7cff;
 }
+
+
+.order-panel {
+  background: #222;
+  padding: 10px;
+  border-radius: 8px;
+  margin: 10px 0;
+}
+
+.order-panel button {
+  display: block;
+  margin: 5px 0;
+}

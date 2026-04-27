@@ -10,5 +10,8 @@ export const state = {
 
   enhancements: {},
   selectedCards: [],
-  turn: 1
+  turn: 1,
+  initiative: null,
+  turnPhase: 'select', // select | order | resolve
+  orderedCards: []
 };
