@@ -23,4 +23,9 @@ uploads
 ecosystem.config.js
 *.webp
 
-backup/
+.venv/
+dataset/
+deploy/
+docs/
+model/
+scripts/
