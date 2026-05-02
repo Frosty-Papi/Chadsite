@@ -49,7 +49,10 @@ app.set("layout", "layouts/main");
 app.set("view engine", "ejs");
 
 app.use(express.static("public"));
-app.use("/deck-assets", express.static(path.join(__dirname, "views", "deck")));
+app.use(
+  "/deck-assets",
+  express.static(path.join(__dirname, "lib", "deckhaven"))
+);
 app.use(require("./routes/uploads"));
 
 app.use(enforceAccountState);

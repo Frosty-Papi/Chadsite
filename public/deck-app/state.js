@@ -13,5 +13,6 @@ export const state = {
   turn: 1,
   initiative: null,
   turnPhase: 'select', // select | order | resolve
-  orderedCards: []
+  orderedCards: [],
+  selectedLevel: 1
 };
