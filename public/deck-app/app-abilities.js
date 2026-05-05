@@ -530,7 +530,16 @@ async function loadGame() {
 
   const data = await res.json();
 
-  if (!data || !Array.isArray(data.builds)) return;
+  if (!data) return;
+
+  if (Array.isArray(data)) {
+    // fallback (shouldn’t happen anymore, but safe)
+    state.builds = data;
+    state.lastPlayed = 0;
+  } else {
+    state.builds = data.builds || [];
+    state.lastPlayed = data.lastPlayed || 0;
+  }
 
   state.builds = data.builds;
   state.lastPlayed = data.lastPlayed || 0;
@@ -546,6 +555,9 @@ async function loadGame() {
 
   function restore(list) {
     if (!Array.isArray(list)) return [];
+
+    const allCards = mergedCards || [];
+
     return list
     .map(img => allCards.find(c => c.image === img))
     .filter(Boolean);
@@ -560,14 +572,21 @@ async function loadGame() {
   state.selectedExpansion = b.expansion;
 }
 
+async function waitForCards() {
+  while (!window.mergedCards || window.mergedCards.length === 0) {
+    await new Promise(r => setTimeout(r, 50));
+  }
+}
 // ===== INIT =====
 init();
 
 async function init() {
+  await waitForCards();   // 🔥 ADD THIS
+
   await loadGame();
 
   if (state.builds.length > 0) {
-    state.view = 'play';   // 🔥 jump straight into game
+    state.view = 'play';
   } else {
     state.view = 'select';
   }

@@ -8,7 +8,7 @@ router.get('/load', (req, res) => {
 
     if (userId) {
         const row = db.prepare(`
-        SELECT builds FROM user_decks WHERE user_id = ?
+        SELECT builds, last_played FROM user_decks WHERE user_id = ?
         `).get(userId);
 
         if (!row || !row.builds) return res.json({ builds: [], lastPlayed: 0 });
@@ -19,7 +19,10 @@ router.get('/load', (req, res) => {
         });
     }
 
-    return res.json(req.session.builds || []);
+    return res.json({
+        builds: req.session.builds || [],
+        lastPlayed: 0
+    });
 });
 
 router.post('/save', (req, res) => {
