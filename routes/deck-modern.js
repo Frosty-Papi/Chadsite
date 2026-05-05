@@ -3,7 +3,7 @@ const db = require("../db");
 
 const router = express.Router();
 
-router.get('/api/deck/load', (req, res) => {
+router.get('/load', (req, res) => {
     const userId = req.session?.userId || null;
 
     if (userId) {
@@ -19,7 +19,7 @@ router.get('/api/deck/load', (req, res) => {
     return res.json(req.session.builds || []);
 });
 
-router.post('/api/deck/save', (req, res) => {
+router.post('/save', (req, res) => {
     const userId = req.session?.userId || null;
     const builds = JSON.stringify(req.body.builds || []);
 

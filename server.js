@@ -67,10 +67,12 @@ app.use("/", require("./routes/admin"));
 app.use("/", require("./routes/services"));
 app.use("/", require("./routes/friends"));
 app.use("/", require("./routes/play"));
-app.use("/", require("./routes/deck-modern"));
-console.log("Deck routes loaded");
+const deckRoutes = require('./routes/deck-modern');
+app.use('/api/deck', enforceAccountState, deckRoutes);
 
-app.get("/deck-modern", (req, res) => res.render("deck-modern"));
+app.get('/deck-modern', enforceAccountState, (req, res) => {
+  res.render('deck-modern');
+});
 app.get("/", (req, res) => res.render("index"));
 
 const server = app.listen(3300, () => console.log("ChadBroChill running on port 3300"));
