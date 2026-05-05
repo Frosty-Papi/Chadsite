@@ -1,12 +1,10 @@
 const express = require("express");
-const bcrypt = require("bcrypt");
 const db = require("../db");
 
 const router = express.Router();
 
 router.get('/api/deck/load', (req, res) => {
     const userId = req.session?.user?.id || null;
-
     if (userId) {
         const row = db.prepare(`
         SELECT deck_state FROM user_decks WHERE user_id = ?
@@ -23,7 +21,6 @@ router.get('/api/deck/load', (req, res) => {
 
 router.post('/api/deck/save', (req, res) => {
     const userId = req.session?.user?.id || null;
-
     const deck = JSON.stringify(req.body);
 
     if (userId) {

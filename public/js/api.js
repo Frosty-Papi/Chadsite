@@ -50,9 +50,9 @@ window.fetch = async (...args) => {
         } catch {}
 
         if (!res.ok) {
-            const msg = data.error || "Request failed";
+            const msg = (data && data.error) || "Request failed";
             showToast(msg, "error");
-        } else if (data.success) {
+        } else if (data && data.success) {
             // Only show success if backend sends it
             showToast("Success");
         }

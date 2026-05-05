@@ -160,44 +160,36 @@ function renderClass() {
   };
 }
 
-// ===== RENDER: CARDS =====
-function renderTabs(app) {
-  const tabs = document.createElement('div');
-
-  tabs.innerHTML = `
-  <button id="tabBuild">Build Deck</button>
-  <button id="tabPlay">Play</button>
-  `;
-
-  tabs.querySelector('#tabBuild').onclick = () => {
-    state.view = 'build';
-    render();
-  };
-
-  tabs.querySelector('#tabPlay').onclick = () => {
-    state.view = 'play';
-    render();
-  };
-
-  app.appendChild(tabs);
-}
-
 function renderBuild() {
   const app = document.getElementById('app');
-  app.innerHTML = '';
-
-  renderTabs(app);
 
   const cls = data[state.selectedExpansion]?.[state.selectedClass];
   if (!cls) return;
 
-  app.innerHTML += `
+  app.innerHTML = `
+  <div class="tabs">
+  <button id="tabBuild">Build Deck</button>
+  <button id="tabPlay">Play</button>
+  </div>
+
   <div class="topbar">
   <div>Hand: ${state.builtHand.length} / 10</div>
   <button id="startGame">Start Game</button>
   </div>
+
   <div class="card-grid"></div>
   `;
+
+  // 🔥 Attach handlers AFTER render
+  document.getElementById('tabBuild').onclick = () => {
+    state.view = 'build';
+    render();
+  };
+
+  document.getElementById('tabPlay').onclick = () => {
+    state.view = 'play';
+    render();
+  };
 
   const grid = app.querySelector('.card-grid');
 
@@ -264,16 +256,32 @@ function renderZone(title, cards, zone) {
 
 async function renderPlay() {
   const app = document.getElementById('app');
-  app.innerHTML = '';
 
-  await loadGame();
+  app.innerHTML = `
+  <div class="tabs">
+  <button id="tabBuild">Build Deck</button>
+  <button id="tabPlay">Play</button>
+  </div>
 
-  renderTabs(app);
+  <div id="content"></div>
+  `;
 
-  app.appendChild(renderZone('Hand', state.cardsInHand, 'hand'));
-  app.appendChild(renderZone('Active', state.cardsActive, 'active'));
-  app.appendChild(renderZone('Discard', state.cardsDiscarded, 'discard'));
-  app.appendChild(renderZone('Lost', state.cardsLost, 'lost'));
+  document.getElementById('tabBuild').onclick = () => {
+    state.view = 'build';
+    render();
+  };
+
+  document.getElementById('tabPlay').onclick = () => {
+    state.view = 'play';
+    render();
+  };
+
+  const content = document.getElementById('content');
+
+  content.appendChild(renderZone('Hand', state.cardsInHand, 'hand'));
+  content.appendChild(renderZone('Active', state.cardsActive, 'active'));
+  content.appendChild(renderZone('Discard', state.cardsDiscarded, 'discard'));
+  content.appendChild(renderZone('Lost', state.cardsLost, 'lost'));
 }
 
 function handleCardAction(card, zone) {
@@ -295,6 +303,18 @@ function handleCardAction(card, zone) {
 
 // ===== ROUTER =====
 async function render() {
+  const hasSavedGame =
+  state.cardsInHand.length ||
+  state.cardsDiscarded.length ||
+  state.cardsLost.length ||
+  state.cardsActive.length;
+
+  // 🔥 PRIORITY: if playing, skip selection flow
+  if (hasSavedGame && state.view === 'play') {
+    return renderPlay();
+  }
+
+  // 🔥 Normal flow
   if (!state.selectedExpansion) return renderExpansion();
   if (!state.selectedClass) return renderClass();
 
@@ -303,19 +323,34 @@ async function render() {
 }
 
 async function saveGame() {
+  const csrf =
+  document.querySelector('meta[name="csrf-token"]')?.content ||
+  document.querySelector('input[name="_csrf"]')?.value;
+
   const payload = {
     cardsInHand: state.cardsInHand.map(c => c.image),
     cardsDiscarded: state.cardsDiscarded.map(c => c.image),
     cardsLost: state.cardsLost.map(c => c.image),
-    cardsActive: state.cardsActive.map(c => c.image)
+    cardsActive: state.cardsActive.map(c => c.image),
+    selectedClass: state.selectedClass,
+    selectedExpansion: state.selectedExpansion
   };
 
-  fetch('/api/deck/save', {
+  const res = await fetch('/api/deck/save', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include', // 🔥 REQUIRED
+    headers: {
+      'Content-Type': 'application/json',
+      ...(csrf ? { 'CSRF-Token': csrf } : {})
+    },
     body: JSON.stringify(payload)
   });
+
+  if (!res.ok) {
+    console.warn('Save failed:', res.status);
+    return;
+  }
+
+  return res.json();
 }
 
 async function loadGame() {
@@ -352,7 +387,27 @@ async function loadGame() {
   state.cardsDiscarded = restore(data.cardsDiscarded);
   state.cardsLost = restore(data.cardsLost);
   state.cardsActive = restore(data.cardsActive);
+  state.selectedClass = data.selectedClass;
+  state.selectedExpansion = data.selectedExpansion;
 }
 
 // ===== INIT =====
-render();
+init();
+
+async function init() {
+  await loadGame();
+
+  const hasSavedGame =
+  state.cardsInHand.length ||
+  state.cardsDiscarded.length ||
+  state.cardsLost.length ||
+  state.cardsActive.length;
+
+  if (hasSavedGame) {
+    state.view = 'play';
+  } else {
+    state.view = 'build';
+  }
+
+  render();
+}
