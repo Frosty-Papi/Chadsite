@@ -67,6 +67,8 @@ app.use("/", require("./routes/admin"));
 app.use("/", require("./routes/services"));
 app.use("/", require("./routes/friends"));
 app.use("/", require("./routes/play"));
+app.use("/", require("./routes/deck-modern"));
+console.log("Deck routes loaded");
 
 app.get("/deck-modern", (req, res) => res.render("deck-modern"));
 app.get("/", (req, res) => res.render("index"));

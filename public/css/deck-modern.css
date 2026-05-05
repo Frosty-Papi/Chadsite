@@ -148,3 +148,11 @@ body {
   gap: 12px;
   margin-bottom: 10px;
 }
+
+.selected {
+  outline: 3px solid #3a7cff;
+}
+
+.zone {
+  margin: 10px 0;
+}

@@ -161,31 +161,43 @@ function renderClass() {
 }
 
 // ===== RENDER: CARDS =====
-function renderCards() {
-  const app = document.getElementById('app');
-  const cls = data[state.selectedExpansion][state.selectedClass];
+function renderTabs(app) {
+  const tabs = document.createElement('div');
 
-  app.innerHTML = `
-  <div class="topbar">
-  <button id="backClass">← Back</button>
-
-  <label>
-  Level:
-  <select id="levelSelect">
-  ${[1,2,3,4,5,6,7,8,9].map(l =>
-    `<option value="${l}" ${l === state.selectedLevel ? 'selected' : ''}>${l}</option>`
-  ).join('')}
-  </select>
-  </label>
-  </div>
-
-  <div class="card-grid"></div>
+  tabs.innerHTML = `
+  <button id="tabBuild">Build Deck</button>
+  <button id="tabPlay">Play</button>
   `;
 
-  document.getElementById('levelSelect').onchange = (e) => {
-    state.selectedLevel = Number(e.target.value);
+  tabs.querySelector('#tabBuild').onclick = () => {
+    state.view = 'build';
     render();
   };
+
+  tabs.querySelector('#tabPlay').onclick = () => {
+    state.view = 'play';
+    render();
+  };
+
+  app.appendChild(tabs);
+}
+
+function renderBuild() {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+
+  renderTabs(app);
+
+  const cls = data[state.selectedExpansion]?.[state.selectedClass];
+  if (!cls) return;
+
+  app.innerHTML += `
+  <div class="topbar">
+  <div>Hand: ${state.builtHand.length} / 10</div>
+  <button id="startGame">Start Game</button>
+  </div>
+  <div class="card-grid"></div>
+  `;
 
   const grid = app.querySelector('.card-grid');
 
@@ -198,20 +210,148 @@ function renderCards() {
     img.src = `/deck-assets/images/${card.image}`;
     img.className = 'ability-card';
 
+    const selected = state.builtHand.some(c => c.image === card.image);
+    if (selected) img.classList.add('selected');
+
+    img.onclick = () => {
+      if (selected) {
+        state.builtHand = state.builtHand.filter(c => c.image !== card.image);
+      } else {
+        if (state.builtHand.length >= 10) return;
+        state.builtHand.push(card);
+      }
+      render();
+    };
+
     grid.appendChild(img);
   });
 
-  document.getElementById('backClass').onclick = () => {
-    state.selectedClass = null;
+  document.getElementById('startGame').onclick = () => {
+    state.cardsInHand = [...state.builtHand];
+    state.cardsDiscarded = [];
+    state.cardsLost = [];
+    state.cardsActive = [];
+
+    saveGame();
+
+    state.view = 'play';
     render();
   };
 }
 
+function renderZone(title, cards, zone) {
+  const section = document.createElement('div');
+  section.className = 'zone';
+
+  section.innerHTML = `<h2>${title} (${cards.length})</h2>`;
+
+  const grid = document.createElement('div');
+  grid.className = 'card-grid';
+
+  cards.forEach(card => {
+    const img = document.createElement('img');
+    img.src = `/deck-assets/images/${card.image}`;
+    img.className = 'ability-card';
+
+    img.onclick = () => handleCardAction(card, zone);
+
+    grid.appendChild(img);
+  });
+
+  section.appendChild(grid);
+  return section;
+}
+
+async function renderPlay() {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+
+  await loadGame();
+
+  renderTabs(app);
+
+  app.appendChild(renderZone('Hand', state.cardsInHand, 'hand'));
+  app.appendChild(renderZone('Active', state.cardsActive, 'active'));
+  app.appendChild(renderZone('Discard', state.cardsDiscarded, 'discard'));
+  app.appendChild(renderZone('Lost', state.cardsLost, 'lost'));
+}
+
+function handleCardAction(card, zone) {
+  const remove = arr => arr.filter(c => c.image !== card.image);
+
+  if (zone === 'hand') {
+    state.cardsInHand = remove(state.cardsInHand);
+    state.cardsDiscarded.push(card);
+  } else if (zone === 'discard') {
+    state.cardsDiscarded = remove(state.cardsDiscarded);
+    state.cardsInHand.push(card);
+  } else if (zone === 'hand') {
+    state.cardsLost.push(card);
+  }
+
+  saveGame();
+  render();
+}
+
 // ===== ROUTER =====
-function render() {
+async function render() {
   if (!state.selectedExpansion) return renderExpansion();
   if (!state.selectedClass) return renderClass();
-  return renderCards();
+
+  if (state.view === 'build') return renderBuild();
+  return renderPlay();
+}
+
+async function saveGame() {
+  const payload = {
+    cardsInHand: state.cardsInHand.map(c => c.image),
+    cardsDiscarded: state.cardsDiscarded.map(c => c.image),
+    cardsLost: state.cardsLost.map(c => c.image),
+    cardsActive: state.cardsActive.map(c => c.image)
+  };
+
+  fetch('/api/deck/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include', // 🔥 REQUIRED
+    body: JSON.stringify(payload)
+  });
+}
+
+async function loadGame() {
+  const res = await fetch('/api/deck/load', {
+    credentials: 'include'
+  });
+
+  if (!res.ok) {
+    console.warn("Load failed:", res.status);
+    return;
+  }
+
+  const text = await res.text();
+
+  // 🔥 prevent HTML crash
+  if (text.startsWith('<')) {
+    console.warn("Got HTML instead of JSON (probably not logged in)");
+    return;
+  }
+
+  const data = JSON.parse(text);
+
+  if (!data) return;
+
+  const allCards = mergedCards;
+
+  function restore(list) {
+    return (list || [])
+    .map(img => allCards.find(c => c.image === img))
+    .filter(Boolean);
+  }
+
+  state.cardsInHand = restore(data.cardsInHand);
+  state.cardsDiscarded = restore(data.cardsDiscarded);
+  state.cardsLost = restore(data.cardsLost);
+  state.cardsActive = restore(data.cardsActive);
 }
 
 // ===== INIT =====

@@ -353,4 +353,12 @@ CREATE TABLE IF NOT EXISTS play_session_members (
 db.prepare(`CREATE INDEX IF NOT EXISTS idx_play_session_members_user ON play_session_members(user_id)`).run();
 db.prepare(`CREATE INDEX IF NOT EXISTS idx_play_session_members_session_role ON play_session_members(session_id, role)`).run();
 
+db.prepare(`
+CREATE TABLE IF NOT EXISTS user_decks (
+  user_id INTEGER PRIMARY KEY,
+  deck_state TEXT,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+`).run();
+
 module.exports = db;

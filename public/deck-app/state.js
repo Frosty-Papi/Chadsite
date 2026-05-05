@@ -1,18 +1,16 @@
 export const state = {
-  view: 'build',
-
+  selectedExpansion: null,
   selectedClass: null,
+  selectedLevel: 1,
 
+  view: 'build', // 'build' or 'play'
+
+  // deck building
+  builtHand: [],
+
+  // gameplay zones
   cardsInHand: [],
   cardsDiscarded: [],
-  cardsDestroyed: [],
-  cardsOnBoard: [],
-
-  enhancements: {},
-  selectedCards: [],
-  turn: 1,
-  initiative: null,
-  turnPhase: 'select', // select | order | resolve
-  orderedCards: [],
-  selectedLevel: 1
+  cardsLost: [],
+  cardsActive: []
 };
