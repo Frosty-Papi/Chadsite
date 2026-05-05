@@ -2,6 +2,8 @@ export const state = {
   selectedExpansion: null,
   selectedClass: null,
   selectedLevel: 1,
+  builds: [],
+  activeBuild: null,
 
   view: 'build', // 'build' or 'play'
 

@@ -156,3 +156,74 @@ body {
 .zone {
   margin: 10px 0;
 }
+
+.build-grid {
+  display: flex;
+  gap: 12px;
+}
+
+.build-card {
+  padding: 10px;
+  border: 1px solid #444;
+}
+
+.build-grid {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.build-card {
+  width: 200px;
+  background: #1e1e1e;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+.build-card img.class-img {
+  width: 100%;
+  border-radius: 6px;
+}
+
+.build-info {
+  margin-top: 8px;
+}
+
+.class-name {
+  font-weight: bold;
+}
+
+.expansion {
+  font-size: 0.8em;
+  color: #aaa;
+}
+
+.hand-size {
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+
+.actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.actions button {
+  font-size: 0.8em;
+}
+
+.build-card.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 2px dashed #555;
+}
+
+.empty-slot {
+  color: #aaa;
+}

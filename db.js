@@ -356,7 +356,7 @@ db.prepare(`CREATE INDEX IF NOT EXISTS idx_play_session_members_session_role ON 
 db.prepare(`
 CREATE TABLE IF NOT EXISTS user_decks (
   user_id INTEGER PRIMARY KEY,
-  deck_state TEXT,
+  builds TEXT,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )
 `).run();

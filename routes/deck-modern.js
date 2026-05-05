@@ -4,42 +4,39 @@ const db = require("../db");
 const router = express.Router();
 
 router.get('/api/deck/load', (req, res) => {
-    const userId = req.session?.user?.id || null;
+    const userId = req.session?.userId || null;
+
     if (userId) {
         const row = db.prepare(`
-        SELECT deck_state FROM user_decks WHERE user_id = ?
+        SELECT builds FROM user_decks WHERE user_id = ?
         `).get(userId);
 
-        if (!row) return res.json(null);
+        if (!row || !row.builds) return res.json([]);
 
-        return res.json(JSON.parse(row.deck_state));
+        return res.json(JSON.parse(row.builds));
     }
 
-    // Guest → load from session
-    return res.json(req.session.deckState || null);
+    return res.json(req.session.builds || []);
 });
 
 router.post('/api/deck/save', (req, res) => {
-    const userId = req.session?.user?.id || null;
-    const deck = JSON.stringify(req.body);
+    const userId = req.session?.userId || null;
+    const builds = JSON.stringify(req.body.builds || []);
 
     if (userId) {
-        // Logged-in user → save to DB
         db.prepare(`
-        INSERT INTO user_decks (user_id, deck_state)
+        INSERT INTO user_decks (user_id, builds)
         VALUES (?, ?)
         ON CONFLICT(user_id) DO UPDATE SET
-        deck_state = excluded.deck_state,
+        builds = excluded.builds,
         updated_at = CURRENT_TIMESTAMP
-        `).run(userId, deck);
+        `).run(userId, builds);
 
-        return res.json({ success: true, type: 'user' });
+        return res.json({ success: true });
     }
 
-    // Guest → store in session
-    req.session.deckState = req.body;
-
-    res.json({ success: true, type: 'guest' });
+    req.session.builds = req.body.builds || [];
+    res.json({ success: true });
 });
 
 module.exports = router;

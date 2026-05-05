@@ -168,8 +168,10 @@ function renderBuild() {
 
   app.innerHTML = `
   <div class="tabs">
+  <button id="tabSelect">Select Class</button>
   <button id="tabBuild">Build Deck</button>
   <button id="tabPlay">Play</button>
+
   </div>
 
   <div class="topbar">
@@ -188,6 +190,11 @@ function renderBuild() {
 
   document.getElementById('tabPlay').onclick = () => {
     state.view = 'play';
+    render();
+  };
+
+  document.getElementById('tabSelect').onclick = () => {
+    state.view = 'select';
     render();
   };
 
@@ -219,10 +226,32 @@ function renderBuild() {
   });
 
   document.getElementById('startGame').onclick = () => {
-    state.cardsInHand = [...state.builtHand];
-    state.cardsDiscarded = [];
-    state.cardsLost = [];
-    state.cardsActive = [];
+    const newBuild = {
+      classId: state.selectedClass,
+      expansion: state.selectedExpansion,
+
+      cardsInHand: state.builtHand.map(c => c.image),
+      cardsDiscarded: [],
+      cardsLost: [],
+      cardsActive: []
+    };
+
+    // replace existing build if same class
+    const existingIndex = state.builds.findIndex(
+      b => b.classId === newBuild.classId
+    );
+
+    if (state.builds.length >= 3 && existingIndex === -1) {
+      return alert("Max 3 builds");
+    }
+
+    if (existingIndex >= 0) {
+      state.builds[existingIndex] = newBuild;
+    } else {
+      state.builds.push(newBuild);
+    }
+
+    state.activeBuild = state.builds.length - 1;
 
     saveGame();
 
@@ -259,6 +288,7 @@ async function renderPlay() {
 
   app.innerHTML = `
   <div class="tabs">
+  <button id="tabSelect">Select Class</button>
   <button id="tabBuild">Build Deck</button>
   <button id="tabPlay">Play</button>
   </div>
@@ -276,6 +306,11 @@ async function renderPlay() {
     render();
   };
 
+  document.getElementById('tabSelect').onclick = () => {
+    state.view = 'select';
+    render();
+  };
+
   const content = document.getElementById('content');
 
   content.appendChild(renderZone('Hand', state.cardsInHand, 'hand'));
@@ -283,6 +318,122 @@ async function renderPlay() {
   content.appendChild(renderZone('Discard', state.cardsDiscarded, 'discard'));
   content.appendChild(renderZone('Lost', state.cardsLost, 'lost'));
 }
+
+function renderSelectClass() {
+  const app = document.getElementById('app');
+
+  app.innerHTML = `
+  <div class="header">
+  <h1>Select Class</h1>
+  </div>
+
+  <div class="build-grid"></div>
+  `;
+
+  const grid = app.querySelector('.build-grid');
+
+  const allCards = mergedCards;
+
+  function restore(list) {
+    if (!Array.isArray(list)) return [];
+    return list
+    .map(img => allCards.find(c => c.image === img))
+    .filter(Boolean);
+  }
+
+  // ===== EXISTING BUILDS =====
+  state.builds.forEach((build, i) => {
+    const cls = data[build.expansion]?.[build.classId];
+    if (!cls) return;
+
+    const div = document.createElement('div');
+    div.className = 'build-card';
+
+    const imgSrc = cls.back
+    ? `/deck-assets/images/${cls.back.image}`
+    : '';
+
+    const handCount = (build.cardsInHand || []).length;
+
+    div.innerHTML = `
+    <img src="${imgSrc}" class="class-img"/>
+    <div class="build-info">
+    <div class="class-name">${build.classId.toUpperCase()}</div>
+    <div class="expansion">${build.expansion}</div>
+    <div class="hand-size">Hand: ${handCount}</div>
+    </div>
+
+    <div class="actions">
+    <button class="load">Play</button>
+    <button class="dup">Duplicate</button>
+    <button class="del">Delete</button>
+    </div>
+    `;
+
+    // LOAD
+    div.querySelector('.load').onclick = () => {
+      state.activeBuild = i;
+
+      const b = state.builds[i];
+
+      state.cardsInHand = restore(b.cardsInHand);
+      state.cardsDiscarded = restore(b.cardsDiscarded);
+      state.cardsLost = restore(b.cardsLost);
+      state.cardsActive = restore(b.cardsActive);
+
+      state.selectedClass = b.classId;
+      state.selectedExpansion = b.expansion;
+
+      state.view = 'play';
+      render();
+    };
+
+    // DELETE
+    div.querySelector('.del').onclick = () => {
+      state.builds.splice(i, 1);
+      saveGame();
+      render();
+    };
+
+    // DUPLICATE
+    div.querySelector('.dup').onclick = () => {
+      if (state.builds.length >= 3) {
+        alert("Max 3 builds");
+        return;
+      }
+
+      const clone = JSON.parse(JSON.stringify(build));
+      state.builds.push(clone);
+
+      saveGame();
+      render();
+    };
+
+    grid.appendChild(div);
+  });
+
+  // ===== EMPTY SLOTS =====
+  const remaining = 3 - state.builds.length;
+
+  for (let i = 0; i < remaining; i++) {
+    const div = document.createElement('div');
+    div.className = 'build-card empty';
+
+    div.innerHTML = `
+    <div class="empty-slot">+ New Build</div>
+    `;
+
+    div.onclick = () => {
+      state.selectedExpansion = null;
+      state.selectedClass = null;
+      state.view = 'build';
+      render();
+    };
+
+    grid.appendChild(div);
+  }
+}
+
 
 function handleCardAction(card, zone) {
   const remove = arr => arr.filter(c => c.image !== card.image);
@@ -303,18 +454,15 @@ function handleCardAction(card, zone) {
 
 // ===== ROUTER =====
 async function render() {
-  const hasSavedGame =
-  state.cardsInHand.length ||
-  state.cardsDiscarded.length ||
-  state.cardsLost.length ||
-  state.cardsActive.length;
-
-  // 🔥 PRIORITY: if playing, skip selection flow
-  if (hasSavedGame && state.view === 'play') {
-    return renderPlay();
+  // 🔥 ALWAYS show Select Class first unless actively building/playing
+  if (!state.view) {
+    return renderSelectClass();
   }
 
-  // 🔥 Normal flow
+  if (state.view === 'select') {
+    return renderSelectClass();
+  }
+
   if (!state.selectedExpansion) return renderExpansion();
   if (!state.selectedClass) return renderClass();
 
@@ -327,22 +475,15 @@ async function saveGame() {
   document.querySelector('meta[name="csrf-token"]')?.content ||
   document.querySelector('input[name="_csrf"]')?.value;
 
-  const payload = {
-    cardsInHand: state.cardsInHand.map(c => c.image),
-    cardsDiscarded: state.cardsDiscarded.map(c => c.image),
-    cardsLost: state.cardsLost.map(c => c.image),
-    cardsActive: state.cardsActive.map(c => c.image),
-    selectedClass: state.selectedClass,
-    selectedExpansion: state.selectedExpansion
-  };
-
   const res = await fetch('/api/deck/save', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...(csrf ? { 'CSRF-Token': csrf } : {})
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({
+      builds: state.builds
+    })
   });
 
   if (!res.ok) {
@@ -365,30 +506,43 @@ async function loadGame() {
 
   const text = await res.text();
 
-  // 🔥 prevent HTML crash
   if (text.startsWith('<')) {
-    console.warn("Got HTML instead of JSON (probably not logged in)");
+    console.warn("Got HTML instead of JSON");
     return;
   }
 
   const data = JSON.parse(text);
 
-  if (!data) return;
+  if (!Array.isArray(data)) {
+    console.warn("Expected builds array, got:", data);
+    return;
+  }
+
+  state.builds = data;
 
   const allCards = mergedCards;
 
   function restore(list) {
-    return (list || [])
+    if (!Array.isArray(list)) return [];
+    return list
     .map(img => allCards.find(c => c.image === img))
     .filter(Boolean);
   }
 
-  state.cardsInHand = restore(data.cardsInHand);
-  state.cardsDiscarded = restore(data.cardsDiscarded);
-  state.cardsLost = restore(data.cardsLost);
-  state.cardsActive = restore(data.cardsActive);
-  state.selectedClass = data.selectedClass;
-  state.selectedExpansion = data.selectedExpansion;
+  // 🔥 If builds exist, load first one as active
+  if (state.builds.length > 0) {
+    state.activeBuild = 0;
+
+    const b = state.builds[0];
+
+    state.cardsInHand = restore(b.cardsInHand);
+    state.cardsDiscarded = restore(b.cardsDiscarded);
+    state.cardsLost = restore(b.cardsLost);
+    state.cardsActive = restore(b.cardsActive);
+
+    state.selectedClass = b.classId;
+    state.selectedExpansion = b.expansion;
+  }
 }
 
 // ===== INIT =====
@@ -397,17 +551,8 @@ init();
 async function init() {
   await loadGame();
 
-  const hasSavedGame =
-  state.cardsInHand.length ||
-  state.cardsDiscarded.length ||
-  state.cardsLost.length ||
-  state.cardsActive.length;
-
-  if (hasSavedGame) {
-    state.view = 'play';
-  } else {
-    state.view = 'build';
-  }
+  // 🔥 Always start at Select Class
+  state.view = 'select';
 
   render();
 }
