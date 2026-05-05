@@ -3,6 +3,16 @@ import { state } from './state.js';
 // ===== LOAD DATA =====
 const rawCards = window.characterAbilityCards || [];
 
+let saveTimeout = null;
+
+function queueSave() {
+  clearTimeout(saveTimeout);
+
+  saveTimeout = setTimeout(() => {
+    persistState();
+  }, 400); // 400ms debounce
+}
+
 // ===== MERGE TOP/BOTTOM INTO SINGLE CARD =====
 function buildCardMap(cards) {
   const map = {};
@@ -219,6 +229,8 @@ function renderBuild() {
         if (state.builtHand.length >= 10) return;
         state.builtHand.push(card);
       }
+
+      queueSave();
       render();
     };
 
@@ -226,35 +238,43 @@ function renderBuild() {
   });
 
   document.getElementById('startGame').onclick = () => {
+    // 🔥 Convert built hand → full play state
+    state.cardsInHand = state.builtHand.map(c => c);
+
+    state.cardsDiscarded = [];
+    state.cardsLost = [];
+    state.cardsActive = [];
+
+    // 🔥 Save build (IMPORTANT: use images)
     const newBuild = {
       classId: state.selectedClass,
       expansion: state.selectedExpansion,
 
-      cardsInHand: state.builtHand.map(c => c.image),
+      cardsInHand: state.cardsInHand.map(c => c.image),
       cardsDiscarded: [],
       cardsLost: [],
       cardsActive: []
     };
 
-    // replace existing build if same class
     const existingIndex = state.builds.findIndex(
       b => b.classId === newBuild.classId
     );
 
-    if (state.builds.length >= 3 && existingIndex === -1) {
-      return alert("Max 3 builds");
-    }
-
     if (existingIndex >= 0) {
       state.builds[existingIndex] = newBuild;
+      state.activeBuild = existingIndex;
     } else {
+      if (state.builds.length >= 3) {
+        alert("Max 3 builds");
+        return;
+      }
       state.builds.push(newBuild);
+      state.activeBuild = state.builds.length - 1;
     }
 
-    state.activeBuild = state.builds.length - 1;
+    persistState();
 
-    saveGame();
-
+    // 🔥 NOW switch view
     state.view = 'play';
     render();
   };
@@ -373,6 +393,7 @@ function renderSelectClass() {
     // LOAD
     div.querySelector('.load').onclick = () => {
       state.activeBuild = i;
+      state.lastPlayed = i;
 
       const b = state.builds[i];
 
@@ -391,7 +412,7 @@ function renderSelectClass() {
     // DELETE
     div.querySelector('.del').onclick = () => {
       state.builds.splice(i, 1);
-      saveGame();
+      persistState();
       render();
     };
 
@@ -405,7 +426,7 @@ function renderSelectClass() {
       const clone = JSON.parse(JSON.stringify(build));
       state.builds.push(clone);
 
-      saveGame();
+      persistState();
       render();
     };
 
@@ -448,7 +469,7 @@ function handleCardAction(card, zone) {
     state.cardsLost.push(card);
   }
 
-  saveGame();
+  queueSave();
   render();
 }
 
@@ -470,28 +491,34 @@ async function render() {
   return renderPlay();
 }
 
-async function saveGame() {
-  const csrf =
-  document.querySelector('meta[name="csrf-token"]')?.content ||
-  document.querySelector('input[name="_csrf"]')?.value;
+async function persistState() {
+  if (state.activeBuild == null) return;
 
-  const res = await fetch('/api/deck/save', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(csrf ? { 'CSRF-Token': csrf } : {})
-    },
-    body: JSON.stringify({
-      builds: state.builds
-    })
-  });
+  const build = state.builds[state.activeBuild];
+  if (!build) return;
 
-  if (!res.ok) {
-    console.warn('Save failed:', res.status);
-    return;
+  state.lastPlayed = state.activeBuild;
+
+  // 🔥 Sync current state into active build
+  build.cardsInHand = state.cardsInHand.map(c => c.image);
+  build.cardsDiscarded = state.cardsDiscarded.map(c => c.image);
+  build.cardsLost = state.cardsLost.map(c => c.image);
+  build.cardsActive = state.cardsActive.map(c => c.image);
+
+  build.classId = state.selectedClass;
+  build.expansion = state.selectedExpansion;
+
+  try {
+    await window.api('/api/deck/save', {
+      method: 'POST',
+      body: {
+        builds: state.builds,
+        lastPlayed: state.lastPlayed
+      }
+    });
+  } catch (err) {
+    console.warn("Auto-save failed:", err);
   }
-
-  return res.json();
 }
 
 async function loadGame() {
@@ -499,26 +526,21 @@ async function loadGame() {
     credentials: 'include'
   });
 
-  if (!res.ok) {
-    console.warn("Load failed:", res.status);
-    return;
-  }
+  if (!res.ok) return;
 
-  const text = await res.text();
+  const data = await res.json();
 
-  if (text.startsWith('<')) {
-    console.warn("Got HTML instead of JSON");
-    return;
-  }
+  if (!data || !Array.isArray(data.builds)) return;
 
-  const data = JSON.parse(text);
+  state.builds = data.builds;
+  state.lastPlayed = data.lastPlayed || 0;
 
-  if (!Array.isArray(data)) {
-    console.warn("Expected builds array, got:", data);
-    return;
-  }
+  if (state.builds.length === 0) return;
 
-  state.builds = data;
+  // 🔥 Load last played
+  state.activeBuild = Math.min(state.lastPlayed, state.builds.length - 1);
+
+  const b = state.builds[state.activeBuild];
 
   const allCards = mergedCards;
 
@@ -529,20 +551,13 @@ async function loadGame() {
     .filter(Boolean);
   }
 
-  // 🔥 If builds exist, load first one as active
-  if (state.builds.length > 0) {
-    state.activeBuild = 0;
+  state.cardsInHand = restore(b.cardsInHand);
+  state.cardsDiscarded = restore(b.cardsDiscarded);
+  state.cardsLost = restore(b.cardsLost);
+  state.cardsActive = restore(b.cardsActive);
 
-    const b = state.builds[0];
-
-    state.cardsInHand = restore(b.cardsInHand);
-    state.cardsDiscarded = restore(b.cardsDiscarded);
-    state.cardsLost = restore(b.cardsLost);
-    state.cardsActive = restore(b.cardsActive);
-
-    state.selectedClass = b.classId;
-    state.selectedExpansion = b.expansion;
-  }
+  state.selectedClass = b.classId;
+  state.selectedExpansion = b.expansion;
 }
 
 // ===== INIT =====
@@ -551,8 +566,11 @@ init();
 async function init() {
   await loadGame();
 
-  // 🔥 Always start at Select Class
-  state.view = 'select';
+  if (state.builds.length > 0) {
+    state.view = 'play';   // 🔥 jump straight into game
+  } else {
+    state.view = 'select';
+  }
 
   render();
 }

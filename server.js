@@ -67,10 +67,12 @@ app.use("/", require("./routes/admin"));
 app.use("/", require("./routes/services"));
 app.use("/", require("./routes/friends"));
 app.use("/", require("./routes/play"));
-const deckRoutes = require('./routes/deck-modern');
-app.use('/api/deck', enforceAccountState, deckRoutes);
 
-app.get('/deck-modern', enforceAccountState, (req, res) => {
+const deckRoutes = require('./routes/deck-modern');
+const { requireLogin } = require('./middleware/auth');
+app.use('/api/deck', requireLogin, deckRoutes);
+
+app.get('/deck-modern', requireLogin, (req, res) => {
   res.render('deck-modern');
 });
 app.get("/", (req, res) => res.render("index"));

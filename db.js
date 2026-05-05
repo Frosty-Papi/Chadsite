@@ -357,6 +357,7 @@ db.prepare(`
 CREATE TABLE IF NOT EXISTS user_decks (
   user_id INTEGER PRIMARY KEY,
   builds TEXT,
+  last_played INTEGER DEFAULT 0,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )
 `).run();
