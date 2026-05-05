@@ -541,9 +541,6 @@ async function loadGame() {
     state.lastPlayed = data.lastPlayed || 0;
   }
 
-  state.builds = data.builds;
-  state.lastPlayed = data.lastPlayed || 0;
-
   if (state.builds.length === 0) return;
 
   // 🔥 Load last played
@@ -573,7 +570,7 @@ async function loadGame() {
 }
 
 async function waitForCards() {
-  while (!window.mergedCards || window.mergedCards.length === 0) {
+  while (!mergedCards || mergedCards.length === 0) {
     await new Promise(r => setTimeout(r, 50));
   }
 }

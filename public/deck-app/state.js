@@ -6,7 +6,7 @@ export const state = {
   activeBuild: null,
   lastPlayed: null,
 
-  view: 'build', // 'build' or 'play'
+  view: null, // 'build' or 'play'
 
   // deck building
   builtHand: [],
