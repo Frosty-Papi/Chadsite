@@ -4,7 +4,7 @@ export const state = {
   selectedLevel: 1,
   builds: [],
   activeBuild: null,
-  lastPlated: 0,
+  lastPlayed: 0,
 
   view: 'build', // 'build' or 'play'
 
