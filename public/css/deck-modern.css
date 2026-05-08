@@ -6,7 +6,8 @@ body {
 }
 
 .page {
-  padding: 20px;
+  padding:
+  8px 12px 16px 12px;
 }
 
 .topbar {
@@ -89,10 +90,6 @@ body {
   margin: 4px;
 }
 
-.selected {
-  outline: 2px solid #3a7cff;
-}
-
 
 .order-panel {
   background: #222;
@@ -147,10 +144,6 @@ body {
   align-items: center;
   gap: 12px;
   margin-bottom: 10px;
-}
-
-.selected {
-  outline: 3px solid #3a7cff;
 }
 
 .zone {
@@ -226,4 +219,183 @@ body {
 
 .empty-slot {
   color: #aaa;
+}
+
+.tabs button.active {
+  background: #4CAF50;
+  color: white;
+}
+
+#startGame:disabled {
+opacity: 0.5;
+cursor: not-allowed;
+}
+
+.preset-btn.active {
+  background: linear-gradient(
+    to bottom,
+    #66bb6a,
+    #388e3c
+  );
+
+  color: white;
+
+  border: 2px solid #a5d6a7;
+
+  transform: translateY(-1px);
+
+  box-shadow:
+  0 2px 8px rgba(0,0,0,0.35),
+  0 0 10px rgba(76,175,80,0.5);
+}
+
+.deck-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 12px;
+}
+
+.deck-section {
+  width: 100%;
+}
+
+.available-row,
+.deck-row {
+  display: flex;
+  align-items: flex-start;
+
+  overflow-x: visible;
+  overflow-y: visible;
+
+  padding: 40px 24px;
+
+  min-height: 260px;
+
+  position: relative;
+}
+
+
+.available-row,
+.deck-row {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  align-items: flex-start;
+
+  overflow: visible;
+
+  padding: 24px 12px;
+
+  min-height: 240px;
+
+  position: relative;
+
+  isolation: isolate;
+
+  row-gap: 5px;
+}
+
+.overlap-card-img {
+  width: 100%;
+
+  display: block;
+
+  transition:
+  transform 0.10s ease-out,
+  box-shadow 0.10s ease-out;
+
+  transform-origin: center center;
+
+  pointer-events: none;
+}
+
+.overlap-card {
+  width: 140px;
+
+  margin-right: -42px;
+
+  position: relative;
+
+  flex-shrink: 0;
+
+  z-index: 1;
+
+  margin-bottom: 5px;
+}
+
+.overlap-card:hover {
+  z-index: 999999;
+}
+
+/* 🔥 Visual enlargement only */
+.overlap-card:hover .overlap-card-img {
+  transform: scale(2.15);
+
+  box-shadow:
+  0 14px 36px rgba(0,0,0,0.72);
+}
+
+html,
+body,
+#app,
+.page,
+.deck-builder,
+.deck-section {
+  overflow: visible !important;
+}
+
+.deck-full .overlap-card-img {
+  filter:
+  grayscale(0.75)
+  brightness(0.55);
+
+}
+
+.deck-full:hover .overlap-card-img {
+  filter:
+  grayscale(0.4)
+  brightness(0.8);
+
+}
+
+.levelup-overlay {
+  position: fixed;
+  inset: 0;
+
+  background: rgba(0,0,0,0.75);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 999999;
+}
+
+.levelup-modal {
+  background: #181818;
+
+  padding: 24px;
+
+  border-radius: 12px;
+
+  max-width: 90vw;
+}
+
+.levelup-row {
+  display: flex;
+  gap: 20px;
+}
+
+#levelUpBtn:disabled {
+opacity: 0.45;
+cursor: not-allowed;
+filter: grayscale(0.6);
+}
+
+#undoLevelBtn:disabled {
+opacity: 0.45;
+cursor: not-allowed;
+filter: grayscale(0.6);
 }

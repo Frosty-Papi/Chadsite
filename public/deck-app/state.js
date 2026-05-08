@@ -10,10 +10,12 @@ export const state = {
 
   // deck building
   builtHand: [],
+  handSize: 10,
 
   // gameplay zones
   cardsInHand: [],
   cardsDiscarded: [],
   cardsLost: [],
   cardsActive: []
+
 };
